@@ -1,22 +1,23 @@
 # Falcon Elevator
 
-This is an attempt to create a set of open source LSL scripts that can 
-operate a somewhat realistic elevator system for use in Second Life.
+This is an attempt to create a set of open source LSL scripts for 
+the operation of elevator systems in Second Life.
 
-While there is a highly sophisticated elevator system already available 
-(see the _Condor_ and, more recently, _Delta_ elevators), those are 
-closed source, the scripts come _no-mod_.
+Currently, the [Delta Elevator](https://marketplace.secondlife.com/p/delta-elevator/15062326) 
+is the most sophisticated elevator system in Second Life - by far. 
+However, its scripts are closed source. This means using the Delta 
+will introduce _no-mod_ scripts to a build, which can be an issue.
 
-The Falcon aims for a similar feature-set as the Condor. However, its 
-target audience are mainly creators, not end-users, which means it does 
-not attempt to be as user-friendly when it comes to the setup.
+The Falcon will focus on core features. It does not aim to copy the 
+full feature-set of the Delta. Also, with the target audience being 
+creators, there won't be much effort on marking the setup process 
+particularly user-friendly.
 
-The idea is to have a solid and versatile script that enables creators 
-to come up with custom tailored elevator systems for their creations 
-without having to go through the trouble of scripting them.
+The goal is to have a solid and versatile script that enables creators 
+to come up with custom tailored elevator systems for their own builds 
+or for distribution to end-users.
 
 This is a very early work-in-progress. There isn't much to see here yet.
-
 
 # Concept
 
