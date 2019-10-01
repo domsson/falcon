@@ -95,61 +95,73 @@ out there; one for each of these cases. For now, one will have to do.
 
 ### General initialization
 
-1.  **Parse description**: On rez, all components read their description 
-    and parse `bank` name, `cab` name and `floor` number, if applicable
-2.  **Setup listener**: The `controller` and all components of type 
-    `cab`, `doorway` and `call_buttons` set up a listener on the same 
-    channel
-3.  **Ping components**: On touch, the `controller` pings all objects in 
-    the region on said channel; the message contains the `bank` name
-4.  **Send Pong**: All listening components check if the `bank` name 
-    matches their own; if so, they message the `controller` back, 
-    specifying their `cab` and `floor` number, if applicable
-5.  **Remember components**: The `controller` creates and maintains a 
-    list of all components that reported back
-6.  **Sanity check**: The `controller` checks if all required components 
-    are in place; that is, at least one `cab` and at least two `doorway` 
-    objects for each `cab`; `call_buttons` are seen as optional as they 
-    might be implemented as a subcomponent of the `doorway` objects
-7.  **Read config**: The `controller` reads its configuration notecard 
-    and parses all relevant information; amongst that information can 
-    optionally be a list of floor numbers/names (one to two digits)
-8.  **Find main doorway**: The `controller` queries the location and 
-    rotation of the _base_ `doorway` (either the one with the lowest 
-    z-position, or the one closests to the associated `cab`, not quite 
-    sure about that yet)
-9.  **Request doorway setup**: The `controller` sends a message to all 
-    `doorway`s, instructing them to perform setup; this message includes 
-    the x- and y-position and rotation as queried from the _base_ 
-    doorway, as well as their custom floor number/name, if any; 
-    additionally, it includes a list of all `floor`s and their 
-    accessibility (this is important so that the `doorway`s can setup 
-    linked `call_buttons` correctly, if any)
-10. **Peform doorway setup**: All `doorway`s undergo setup and report 
-    failure or success back to the `controller`
-11. **Request cab setup**: The `controller` sends a message to all 
-    `cab`s, instructing them to perform setup; this message includes a 
-    list of all `floor`s, including their z-position, as well as their 
-    custom floor number/names, if any, and whether each `floor` is 
-    actually accessible by that particular `cab` (some floors might not 
-    be accessible by all the `cab`s in a `bank`)
-12. **Perform cab setup**: All `cab`s perform setup, including setting 
-    up their subcomponents; the `cab`s then send a message back to the 
-    `controller`, specifying if setup was successfull or failed
-13. **Request button setup**: The `controller` sends a message to all 
-    `call_buttons` (if any), instructing them to perform setup; the 
-    message contains a list of all `floor`s and their accessibility 
-    (this is important so that the buttons can be set up correctly, i.e. 
-    show only an up-arrow button if there are no floors below etc)
-14. **Perform button setup**: All `call_buttons`, if any, perform setup 
-    and report back to the `controller` accordingly
-15. **Inform about success**: If all components were setup successfully, 
-    the `controller` sends out messages to all registered components, 
-    informing them that the system is ready
-16. **Finish up**: All components may now peform additional steps to get 
-    into their individual idle/ready states; for example, all `cab`s and 
-    `doorway`s might want to close their doors, if any, unless they've 
-    already done that during setup
+1.  **Parse description**  
+    On rez, all components read their description and parse `bank` name, 
+    `cab` name and `floor` number, if applicable
+2.  **Setup listener**  
+    The `controller` and all components of type `cab`, `doorway` and 
+    `call_buttons` set up a listener on the same channel
+3.  **Ping components**  
+    On touch, the `controller` pings all objects in the region on said 
+    channel; the message contains the `bank` name
+4.  **Send Pong**  
+    All listening components check if the `bank` name matches their own; 
+    if so, they message the `controller` back, specifying their `cab` 
+    and `floor` number, if applicable
+5.  **Remember components**  
+    The `controller` creates and maintains a list of all components that 
+    reported back
+6.  **Sanity check**  
+    The `controller` checks if all required components are in place; 
+    that is, at least one `cab` and at least two `doorway` objects for 
+    each `cab`; `call_buttons` are seen as optional as they might be 
+    implemented as a subcomponent of the `doorway` objects
+7.  **Read config**  
+    The `controller` reads its configuration notecard and parses all 
+    relevant information; amongst that information can optionally be a 
+    list of floor numbers/names (one to two digits)
+8.  **Find main doorway**  
+    The `controller` queries the location and rotation of the _base_ 
+    `doorway` (either the one with the lowest z-position, or the one 
+    closests to the associated `cab`, not quite sure about that yet)
+9.  **Request doorway setup**  
+    The `controller` sends a message to all `doorway`s, instructing them 
+    to perform setup; this message includes the x- and y-position and 
+    rotation as queried from the _base_ doorway, as well as their custom 
+    floor number/name, if any; additionally, it includes a list of all 
+    `floor`s and their accessibility (this is important so that the 
+    `doorway`s can setup linked `call_buttons` correctly, if any)
+10. **Peform doorway setup**  
+    All `doorway`s undergo setup and report failure or success back to 
+    the `controller`
+11. **Request cab setup**  
+    The `controller` sends a message to all `cab`s, instructing them to 
+    perform setup; this message includes a list of all `floor`s, 
+    including their z-position, as well as their custom floor 
+    number/names, if any, and whether each `floor` is actually 
+    accessible by that particular `cab` (some floors might not be 
+    accessible by all the `cab`s in a `bank`)
+12. **Perform cab setup**  
+    All `cab`s perform setup, including setting up their subcomponents; 
+    the `cab`s then send a message back to the `controller`, 
+    specifying if setup was successfull or failed
+13. **Request button setup**  
+    The `controller` sends a message to all `call_buttons` (if any), 
+    instructing them to perform setup; the message contains a list of 
+    all `floor`s and their accessibility (this is important so that the 
+    buttons can be set up correctly, i.e. show only an up-arrow button 
+    if there are no floors below etc)
+14. **Perform button setup**  
+    All `call_buttons`, if any, perform setup and report back to the 
+    `controller` accordingly
+15. **Inform about success**  
+    If all components were setup successfully, the `controller` sends 
+    out messages to all registered components, informing them that the 
+    system is ready
+16. **Finish up**  
+    All components may now peform additional steps to get into their 
+    individual idle/ready states; for example, all `cab`s and `doorway`s 
+    might want to close their doors, if any, etc
     
 
 ### Cab subcomponent initialization
