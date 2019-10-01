@@ -1,9 +1,9 @@
 # Falcon Elevator
 
-This is an attempt to create a set of open source LSL scripts that can 
-operate a somewhat realistic elevator system for use in Second Life.
+This is an attempt to create a set of open source LSL scripts for 
+the operation of elevator systems in Second Life.
 
-Currently, the [Delta Elevator] is the most sophisticated elevator 
+Currently, the [Delta Elevator](https://marketplace.secondlife.com/p/delta-elevator/15062326) is the most sophisticated elevator 
 system on the Second Life market - by far. However, its scripts are 
 closed source. This means using the Delta elevator will introduce
 _no-mod_ scripts to any build, which can be problematic.
