@@ -7,7 +7,7 @@ While there is a highly sophisticated elevator system already available
 (see the _Condor_ and, more recently, _Delta_ elevators), those are 
 closed source, the scripts come _no-mod_.
 
-The Falcon aims for a similar features-set as the Condor. However, its 
+The Falcon aims for a similar feature-set as the Condor. However, its 
 target audience are mainly creators, not end-users, which means it does 
 not attempt to be as user-friendly when it comes to the setup.
 
@@ -23,17 +23,16 @@ This is a very early work-in-progress. There isn't much to see here yet.
 The following are notes on how the system is intended to work; these are 
 my personal implementation notes/concepts. Unless you are working on an 
 elevator script yourself and want some inspiration, this won't be of use 
-to you
+to you.
 
 
 ## Identifiers
 
-Components have to be associated with identifiers that represent certain 
-concepts of an elevator system. These are as follows:
+Identifiers represent the relevant concepts of an elevator system:
 
-- `bank`,  a set of elevators serving the same floors
+- `bank`,  a set of elevators that work in conjunction
 - `cab`,   an elevator operating in a bank
-- `floor`, a platform/level that a cab can travel to
+- `floor`, a landing that a cab can travel to
 
 
 ## Components
