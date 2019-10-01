@@ -209,7 +209,7 @@ only some of that information is required:
 | `call_buttons` | `bank::floor`      | `north-bank::3`                |
 
 Note that `call_buttons` have an empty string for the `cab` name, hence 
-the two colons (`:`).
+the two colons (`::`).
 
 Since `:` is used as delimiter, it can't be used as part of any of the 
 identifiers. In fact, identifier names may only contain alphanumeric 
@@ -219,12 +219,37 @@ chacters (a-z, 0-9), underscores and dashes.
 
 ### Message syntax
 
-_TODO_
+Messages can contain a maximum of 1024 ASCII characters. The keywords 
+involved should therefore be kept rather short in order to maximize the 
+bytes available for the payload.
 
-### Component signatures
+The general message syntax is as follows:
 
-_TODO_
+`signature command parameters`
 
-### Message types
+#### Message syntax: signature
 
-_TODO_
+The signature identifies the type of component that sent the message:
+
+| component      | signature                                           |
+|----------------|-----------------------------------------------------|
+| `controller`   | `falcon-control`                                    |
+| `cab`          | `falcon-cab`                                        |
+| `doorway`      | `falcon-doorway`                                    |
+| `call_buttons` | `falcon-buttons`                                    |
+
+#### Message syntax: command
+
+The command is a string that tells the type and meaning of a message. 
+The list of commands is subject to frequent change for the time being.
+
+| command            | meaning                                         |
+|--------------------|-------------------------------------------------|
+| `ping`             | Scanning sim for components, request for `pong` |
+| `pong`             | Answer to a `ping`                              |
+
+#### Message syntax: parameters
+
+The parameters can be empty or any arbitrary string. The meaning and how 
+to parse the parameter string depends on the type of message. For every 
+command, the number and meaning of its parameters shall be documented.
