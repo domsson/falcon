@@ -150,13 +150,54 @@ out there; one for each of these cases. For now, one will have to do.
 
 ### Cab subcomponent initialization
 
-_TODO_
+This depends on how the cab is constructed and implemented. There are 
+generally three different approaches here:
 
+- The `cab`s subcomponents are separate (but linked) prims with separate 
+  scripts controlling them - in this case, setup could look similar to 
+  how the controller is setting up the main components (see above), 
+  meaning that the `cab` sends out a message to all prims in the linkset, 
+  keeps a list of all relevant prims that replied, then instructs them 
+  to perform setup;
+- The `cab`s subcomponents are separate (but linked) prims with no 
+  additional scripts - in this case, the `cab` would do all the work of 
+  scanning the linkset, identifying the relevant objects and setting 
+  them up as needed;
+- The `cab`s subcomponents could be implemented as touchable texture 
+  areas or in similar ways that do not require additional prims; the 
+  `cab` would then do all the work that the subcomponents might 
+  otherwise handle
 
 ### Doorway subcomponent initialization
 
-_TODO_
+The same general logic as for the cab subcomponent initialization 
+applies, see above.
 
+
+## Description string syntax
+
+Each main component needs to have certain information present in its 
+description field, which will be used for initialization. This is 
+different from the Delta, which will use more advanced logic instead. 
+However, using a description string is a very solid approach that allows 
+for relatively simple script logic and isn't too hard to set up either.
+
+The general syntax is `bank:cab:floor`, but depending on the component, 
+only some of that information is required:
+
+| component      | description syntax | example                        |
+|----------------|--------------------|--------------------------------|
+| `controller`   | `bank`             | `south-bank`                   |
+| `cab`          | `bank:cab`         | `south-bank:cab1`              |
+| `doorway`      | `bank:cab:floor`   | `north-bank:cab-left:2`        |
+| `call_buttons` | `bank::floor`      | `north-bank::3`                |
+
+Note that `call_buttons` have an empty string for the `cab` name, hence 
+the two colons (`:`).
+
+Since `:` is used as delimiter, it can't be used as part of any of the 
+identifiers. In fact, identifier names may only contain alphanumeric 
+chacters (a-z, 0-9), underscores and dashes.
 
 ## Communication
 
