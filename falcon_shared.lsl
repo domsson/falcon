@@ -64,3 +64,28 @@ send_broadcast_l(string cmd, list params)
     string msg = SIGNATURE + " " + cmd + " " + llDumpList2String(params, "");
     llRegionSay(CHANNEL, msg);
 }
+
+process_message(integer chan, string name, key id, string msg)
+{
+    // Debug print the received message
+    debug(" < `" + msg + "`");
+    
+    // Get details about the sender
+    list details = llGetObjectDetails(id, ([OBJECT_NAME, OBJECT_DESC, 
+                                            OBJECT_POS, OBJECT_ROT, OBJECT_OWNER]));
+   
+    // Abort if the message came from someone else's object
+    if (owner != llList2Key(details, 4))
+    {
+        return;
+    }
+
+    // Split the message on spaces and extract the first two tokens
+    list    tokens     = llParseString2List(msg, [" "], []);
+    integer num_tokens = llGetListLength(tokens);
+    string  signature  = llList2String(tokens, 0);   
+    string  command    = llList2String(tokens, 1);
+    list    parameters = llList2List(tokens, 2, num_tokens - 1);
+    
+    // TODO: component-specific code goes here
+}
