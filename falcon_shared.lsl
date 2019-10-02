@@ -10,6 +10,6 @@
  */
 list parse_desc(string sep)
 {
-    list tokens = llParseString2List(llGetObjectDesc(), [sep], []);
-    return [llList2String(tokens, 0), llList2String(tokens, 1), llList2String(tokens, 1)];
+    list tks = llParseString2List(llGetObjectDesc(), [sep], []);
+    return [llList2String(tks, 0), llList2String(tks, 1), llList2String(tks, 2)];
 }
