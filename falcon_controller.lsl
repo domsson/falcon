@@ -4,6 +4,8 @@ string  SIGNATURE = "falcon-control";
 integer CHANNEL = -130104;
 integer NOT_FOUND = -1; // ll* functions often return -1 to indicate 'not found'
 
+float PING_TIME = 3.0;
+
 integer listen_handle;
 
 // description identifiers
@@ -106,7 +108,6 @@ handle_cmd_pong(string sig, key id, string desc)
 send_message(key id, string cmd, string params)
 {
     string msg = SIGNATURE + " " + cmd + " " + params;
-    //debug(" > `" + msg + "`");
     llRegionSayTo(id, CHANNEL, msg);
 }
 
@@ -116,7 +117,6 @@ send_message(key id, string cmd, string params)
 send_broadcast(string cmd, string params)
 {
     string msg = SIGNATURE + " " + cmd + " " + params;
-    //debug(" >> `" + msg + "`");
     llRegionSay(CHANNEL, msg);
 }
 
@@ -138,22 +138,80 @@ list add_component(list comps, key id, string desc)
     return comps;
 }
 
+integer all_components_in_place()
+{
+    // TODO: this needs to check if there are at least two doors for EACH cab,
+    //       not just how many cabs/doorways there are in general...
+    if (llGetListLength(cabs) < 1)
+    {
+        return FALSE;
+    } 
+    if (llGetListLength(doorways) < 2)
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+integer init()
+{
+    owner = llGetOwner();
+    identifiers = parse_desc(":");
+    
+    return TRUE;
+}
+
 default
 {
     state_entry()
     {
-        owner = llGetOwner();
-        identifiers = parse_desc(":");
-        listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
+        init();
     }
 
     touch_start(integer total_number)
     {
+       state pinging; 
+    }
+
+    state_exit()
+    {
+        // Nothing (yet)
+    }
+}
+
+/*
+ * Broadcasting a ping to all objects in a quest to find all relevant elevator 
+ * system components that belong to the same owner and operate in the same bank.
+ */
+state pinging
+{
+    state_entry()
+    {
+        listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
         send_broadcast("ping", llList2String(identifiers, 0));
+        llSetTimerEvent(PING_TIME);
     }
     
     listen(integer channel, string name, key id, string message)
     {
         process_message(channel, name, id, message);
+    }
+    
+    timer()
+    {        
+        llSetTimerEvent(0.0);
+        if (all_components_in_place())
+        {
+            llOwnerSay("Time's up and everything is in place, let's move on!");   
+        }
+        else
+        {
+            llOwnerSay("Time's up but not all components are in place. Aborting.");
+        }
+    }
+    
+    state_exit()
+    {
+        // Nothing (yet)
     }
 }

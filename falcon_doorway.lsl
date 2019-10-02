@@ -1,6 +1,6 @@
 // CONSTS
 integer DEBUG = TRUE;
-string  SIGNATURE = "falcon-cab";
+string  SIGNATURE = "falcon-doorway";
 integer CHANNEL = -130104;
 integer NOT_FOUND = -1; // ll* functions often return -1 to indicate 'not found'
 
@@ -101,9 +101,6 @@ integer init()
 {
     owner = llGetOwner();
     identifiers = parse_desc(":");
-    
-    llSetLinkPrimitiveParamsFast(LINK_SET,  [PRIM_SCRIPTED_SIT_ONLY, TRUE]);
-    llSetLinkPrimitiveParamsFast(LINK_THIS, [PRIM_PHYSICS_SHAPE_TYPE, PRIM_PHYSICS_SHAPE_CONVEX]);
     
     return TRUE;
 }
