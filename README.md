@@ -79,6 +79,10 @@ script in the parent component take care of the subcomponents.
 I'm hoping to be able to eventually get two reference implementations 
 out there; one for each of these cases. For now, one will have to do.
 
+## Component diagram
+
+![Falcon elevator system component diagram](falcon-components.png)
+
 ## General thoughts
 
 - All communcation between the main components always goes through the 
