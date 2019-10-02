@@ -243,6 +243,13 @@ The signature identifies the type of component that sent the message:
 The command is a string that tells the type and meaning of a message. 
 The list of commands is subject to frequent change for the time being.
 
+Note to self: commands should be as system-agnostic as possible. For 
+example, an elevator system might not have buttons in the cab, but a 
+simple lever for "up" and "down". Also, there might be no doors on the 
+cab and/or doorways at all. Hence, a command like `doors_closed` seems 
+too specific, makes too many assumptions. Instead, something like 
+`ready_for_departure` should work for pretty much any system.
+
 | command            | meaning                                         |
 |--------------------|-------------------------------------------------|
 | `ping`             | Scanning sim for components, request for `pong` |
