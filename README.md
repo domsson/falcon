@@ -32,7 +32,7 @@ to you.
 Identifiers represent the relevant concepts of an elevator system:
 
 - `bank`,  a set of elevators that work in conjunction
-- `cab`,   an elevator operating in a bank
+- `shaft`, conceptually equivalent to an elevator cab
 - `floor`, a landing that a cab can travel to
 
 
@@ -44,7 +44,7 @@ The following components are required for operation:
 |-------------------|-------------------------|------------------------|
 | `controller`      | 1 per system            | `bank`                 |
 | `cab`             | 1-4 per `bank`          | `bank`                 |
-| `doorway`         | 1 per `cab` and `floor` | `bank`, `cab`, `floor` |
+| `doorway`         | 1 per `shaft` & `floor` | `bank`, `shaft`, `floor` |
 | `call_buttons`    | 0-4 per `floor`         | `bank`, `floor`        |
 
 Note that the `call_buttons` may be implemented as subcomponent of a
@@ -101,7 +101,7 @@ out there; one for each of these cases. For now, one will have to do.
 
 1.  **Parse description**  
     On rez, all components read their description and parse `bank` name, 
-    `cab` name and `floor` number, if applicable
+    `shaft` name and `floor` number, if applicable
 2.  **Setup listener**  
     The `controller` and all components of type `cab`, `doorway` and 
     `call_buttons` set up a listener on the same channel
@@ -110,7 +110,7 @@ out there; one for each of these cases. For now, one will have to do.
     channel; the message contains the `bank` name
 4.  **Send Pong**  
     All listening components check if the `bank` name matches their own; 
-    if so, they message the `controller` back, specifying their `cab` 
+    if so, they message the `controller` back, specifying their `shaft` 
     and `floor` number, if applicable
 5.  **Remember components**  
     The `controller` creates and maintains a list of all components that 
@@ -202,18 +202,18 @@ different from the Delta, which will use more advanced logic instead.
 However, using a description string is a very solid approach that allows 
 for relatively simple script logic and isn't too hard to set up either.
 
-The general syntax is `bank:cab:floor`, but depending on the component, 
-only some of that information is required:
+The general syntax is `bank:shaft:floor`, but depending on the 
+component, only some of that information is required:
 
 | component      | description syntax | example                        |
 |----------------|--------------------|--------------------------------|
 | `controller`   | `bank`             | `south-bank`                   |
-| `cab`          | `bank:cab`         | `south-bank:cab1`              |
-| `doorway`      | `bank:cab:floor`   | `north-bank:cab-left:2`        |
+| `cab`          | `bank:shaft`       | `south-bank:shaft1`            |
+| `doorway`      | `bank:shaft:floor` | `north-bank:shaft-left:2`      |
 | `call_buttons` | `bank::floor`      | `north-bank::3`                |
 
-Note that `call_buttons` have an empty string for the `cab` name, hence 
-the two colons (`::`).
+Note that `call_buttons` have an empty string for the `shaft` name, 
+hence the two colons (`::`).
 
 Since `:` is used as delimiter, it can't be used as part of any of the 
 identifiers. In fact, identifier names may only contain alphanumeric 
