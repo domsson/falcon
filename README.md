@@ -260,3 +260,16 @@ too specific, makes too many assumptions. Instead, something like
 The parameters can be empty or any arbitrary string. The meaning and how 
 to parse the parameter string depends on the type of message. For every 
 command, the number and meaning of its parameters shall be documented.
+
+## Things to look out for
+
+There are multiple scenarios we need to think through that will probably 
+require some scripting to make sure all is handled well. We'll collect 
+these things here for now:
+
+- Can the cabs be linked to the rest of the build?
+- Would the scripting be the same for linked or unlinked cabs?
+- What happens when something gets linked/unlinked?
+- What happens when everything is taken to inventory and rezzed back?
+- What happens on owner change?
+
