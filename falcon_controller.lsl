@@ -4,13 +4,14 @@ string  SIGNATURE = "falcon-control";
 integer CHANNEL = -130104;
 integer NOT_FOUND = -1; // ll* functions often return -1 to indicate 'not found'
 
-float PING_TIME = 3.0;
+float PAIRING_TIME = 3.0;
+float SETUP_TIME = 6.0;
 
-integer listen_handle;
 
 // description identifiers
 // 0: bank, 1: shaft, 2: floor
 list identifiers;
+string description;
 
 // list of all `cab` objects
 // [key cab_key, string desc ...]
@@ -27,7 +28,13 @@ integer doorways_stride = 2;
 list    buttons;
 integer buttons_stride = 2;
 
-key owner;
+// important objects/ids
+key uuid = NULL_KEY;
+key owner = NULL_KEY;
+
+// state etc
+integer listen_handle;
+string current_state;
 
 /*
  * Debug output `msg` via llOwnerSay if the global variable DEBUG is TRUE
@@ -78,26 +85,37 @@ process_message(integer chan, string name, key id, string msg)
     
     if (command == "pong")
     {
-        handle_cmd_pong(signature, id, llList2String(details, 1));
+        handle_cmd_pong(signature, id, parameters);
         return;
+    }
+    
+    if (command == "status")
+    {
+        handle_cmd_status(signature, id, parameters);
     }
 }
 
-handle_cmd_pong(string sig, key id, string desc)
+handle_cmd_pong(string sig, key id, list params)
+{
+    // Currently nothing
+    debug("Received PONG from " + sig + " (" + (string) params + ")");
+}
+
+handle_cmd_status(string sig, key id, list params)
 {
     if (sig == "falcon-cab")
     {
-        cabs = add_component(cabs, id, desc);
+        cabs = add_component(cabs, id, llList2String(params, 0));
         return;
     }
     if (sig == "falcon-doorway")
     {
-        doorways = add_component(doorways, id, desc);
+        doorways = add_component(doorways, id, llList2String(params, 0));
         return;
     }
     if (sig == "falcon-buttons")
     {
-        buttons = add_component(buttons, id, desc);
+        buttons = add_component(buttons, id, llList2String(params, 0));
         return;
     }
 }
@@ -105,18 +123,18 @@ handle_cmd_pong(string sig, key id, string desc)
 /*
  * Send a message to the object with UUID `id`.
  */ 
-send_message(key id, string cmd, string params)
+send_message(key id, string cmd, list params)
 {
-    string msg = SIGNATURE + " " + cmd + " " + params;
+    string msg = SIGNATURE + " " + cmd + " " + llDumpList2String(params, "");
     llRegionSayTo(id, CHANNEL, msg);
 }
 
 /*
  * Broadcast a message to all objects in the region.
  */
-send_broadcast(string cmd, string params)
+send_broadcast(string cmd, list params)
 {
-    string msg = SIGNATURE + " " + cmd + " " + params;
+    string msg = SIGNATURE + " " + cmd + " " + llDumpList2String(params, "");
     llRegionSay(CHANNEL, msg);
 }
 
@@ -153,9 +171,17 @@ integer all_components_in_place()
     return TRUE;
 }
 
+integer all_components_setup()
+{
+    // TODO
+    return FALSE;
+}
+
 integer init()
 {
+    uuid = llGetKey();
     owner = llGetOwner();
+    description = llGetObjectDesc();
     identifiers = parse_desc(":");
     
     return TRUE;
@@ -165,12 +191,13 @@ default
 {
     state_entry()
     {
+        current_state = "default";
         init();
     }
 
     touch_start(integer total_number)
     {
-       state pinging; 
+       state pairing; 
     }
 
     state_exit()
@@ -180,16 +207,20 @@ default
 }
 
 /*
- * Broadcasting a ping to all objects in a quest to find all relevant elevator 
- * system components that belong to the same owner and operate in the same bank.
+ * Broadcasting a pairing request to all objects in in the region, then waiting
+ * for a reply from suitable components (same owner, same elevator bank).
  */
-state pinging
+state pairing
 {
     state_entry()
     {
+        current_state = "pairing";
+        
         listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
-        send_broadcast("ping", llList2String(identifiers, 0));
-        llSetTimerEvent(PING_TIME);
+        
+        debug("Started pairing process...");
+        send_broadcast("pair", [llList2String(identifiers, 0)]);
+        llSetTimerEvent(PAIRING_TIME);
     }
     
     listen(integer channel, string name, key id, string message)
@@ -202,16 +233,78 @@ state pinging
         llSetTimerEvent(0.0);
         if (all_components_in_place())
         {
-            llOwnerSay("Time's up and everything is in place, let's move on!");   
+            llOwnerSay("Pairing done. Everything is in place.");
+            state setup; 
         }
         else
         {
-            llOwnerSay("Time's up but not all components are in place. Aborting.");
+            llOwnerSay("Pairing done. Some components are missing.");
+            state default;
         }
     }
     
     state_exit()
     {
         // Nothing (yet)
+    }
+}
+
+state setup
+{
+    state_entry()
+    {
+        current_state = "setup";
+        
+        debug("Started setup process...");
+        // TODO parse configuration notecard
+        // TODO figure out which doorway is 'base' doorway
+        // TODO get 'base' doorways position/rotation
+        // TODO send 'setup' message to all components
+        llSetTimerEvent(SETUP_TIME);
+    }
+    
+    listen(integer channel, string name, key id, string message)
+    {
+        process_message(channel, name, id, message);
+    }
+    
+    timer()
+    {        
+        llSetTimerEvent(0.0);
+        if (all_components_setup())
+        {
+            llOwnerSay("Setup done. All systems ready.");
+            state ready; 
+        }
+        else
+        {
+            llOwnerSay("Setup failed.");
+            state default;
+        }
+    }
+    
+    state_exit()
+    {
+        // Nothing yet
+    }
+}
+
+state ready
+{
+    state_entry()
+    {
+        current_state = "ready";
+        
+        debug("System is in operation...");
+    }
+    
+    listen(integer channel, string name, key id, string message)
+    {
+        process_message(channel, name, id, message);
+    }
+    
+    state_exit()
+    {
+        // Nothing yet
     }
 }

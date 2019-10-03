@@ -14,6 +14,9 @@ list identifiers;
 key owner = NULL_KEY;
 key controller = NULL_KEY;
 
+// the script state
+string current_state;
+
 /*
  * Debug output `msg` via llOwnerSay if the global variable DEBUG is TRUE
  */
@@ -61,26 +64,64 @@ process_message(integer chan, string name, key id, string msg)
     string  command    = llList2String(tokens, 1);
     list    parameters = llList2List(tokens, 2, num_tokens - 1);
     
+    // Abort if the message didn't come from a controller
+    if (signature != "falcon-control")
+    {
+        return;
+    }
+    
     if (command == "ping")
     {
         handle_cmd_ping(signature, id, parameters);
+        return;
+    }
+    
+    if (command == "pair")
+    {
+        handle_cmd_pair(signature, id, parameters);
+        return;
+    }
+    
+    if (command == "status")
+    {
+        handle_cmd_status(signature, id);
+        return;
     }
 }
 
 handle_cmd_ping(string sig, key id, list params)
 {
-    if (sig != "falcon-control")
-    {
-        return;
-    }
-    
+    // Abort if `bank` doesn't match
     if (llList2String(params, 0) != llList2String(identifiers, 0))
     {
         return;
     }
     
-    set_controller(id);
     send_message(id, "pong", llGetObjectDesc());
+}
+
+handle_cmd_pair(string sig, key id, list params)
+{
+    // Abort if `bank` doesn't match
+    if (llList2String(params, 0) != llList2String(identifiers, 0))
+    {
+        return;
+    }
+
+    // We weren't paired yet, let's do it now
+    if (controller == NULL_KEY)
+    {
+        set_controller(id);
+        state paired;
+    }
+    
+    // We were already paired, just let the controller know
+    send_message(id, "status", current_state + " " + (string) controller);
+}
+
+handle_cmd_status(string sig, key id)
+{
+    send_message(id, "status", current_state + " " + (string) controller);
 }
  
 /*
@@ -109,8 +150,9 @@ default
 {
     state_entry()
     {
+        current_state = "default";
         init();
-        state uninitialized;
+        state booted;
     }
     
     state_exit()
@@ -119,21 +161,53 @@ default
     }
 }
 
-state uninitialized
+state booted
 {
     state_entry()
     {
+        current_state = "booted";
+        
         // We're waiting for a ping by the controller
         listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
+    }
+    
+    listen(integer channel, string name, key id, string message)
+    {
+        process_message(channel, name, id, message);
     }
     
     state_exit()
     {
         // Nothing yet
     }
+}
+
+/*
+ * We've been paired with a controller. In this state, we're waiting for setup
+ * instructions by the controller. We're also listening to `ping` and similar 
+ * messages, of course.
+ */
+state paired
+{
+    state_entry()
+    {
+        current_state = "paired";
+        
+        // We inform the controller of our status change
+        send_message(controller, "status", "paired " + (string) controller);
+        
+        // We could only listen for messages by the controller as we now know 
+        // its UUID; however, that could get us stuck if the controller UUID 
+        // ever changes to to re-rez or region restart or what-not
+        listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
+    }
     
     listen(integer channel, string name, key id, string message)
     {
         process_message(channel, name, id, message);
+    }
+    
+    state_exit()
+    {
     }
 }

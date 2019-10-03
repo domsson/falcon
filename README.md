@@ -105,13 +105,13 @@ out there; one for each of these cases. For now, one will have to do.
 2.  **Setup listener**  
     The `controller` and all components of type `cab`, `doorway` and 
     `call_buttons` set up a listener on the same channel
-3.  **Ping components**  
-    On touch, the `controller` pings all objects in the region on said 
+3.  **Request pairing**  
+    On touch, the `controller` broadcasts a `pair` message on said 
     channel; the message contains the `bank` name
-4.  **Send Pong**  
+4.  **Confirm pairing**  
     All listening components check if the `bank` name matches their own; 
-    if so, they message the `controller` back, specifying their `shaft` 
-    and `floor` number, if applicable
+    if so, they message the `controller` back with a `status` message, 
+    specifying their `shaft` and `floor` number, if applicable
 5.  **Remember components**  
     The `controller` creates and maintains a list of all components that 
     reported back
@@ -254,16 +254,63 @@ cab and/or doorways at all. Hence, a command like `doors_closed` seems
 too specific, makes too many assumptions. Instead, something like 
 `ready_for_departure` should work for pretty much any system.
 
-| command            | meaning                                         |
-|--------------------|-------------------------------------------------|
-| `ping`             | Scanning sim for components, request for `pong` |
-| `pong`             | Answer to a `ping`                              |
-
 #### Message syntax: parameters
 
 The parameters can be empty or any arbitrary string. The meaning and how 
 to parse the parameter string depends on the type of message. For every 
 command, the number and meaning of its parameters shall be documented.
+
+
+### Message commands and parameters
+
+In the following, a `>` indicates a message from the controller to the 
+components, `<` is a message from a component to the controller.
+
+#### `ping`
+
+    `> ping ident-string`
+    
+Broadcast message to scan the sim for components. Matching components 
+(those with the same `bank` name) should reply to the sender via `pong`. 
+The `ident-string` is the string originally taken from the description, 
+which for the controller is simply the `bank` name.
+
+#### `pong`
+
+    `< pong ident-string`
+    
+A component's reply to a controller's `ping` message, given that their 
+`bank` names are a match.
+
+#### `pair`
+
+    `> pair ident-string`
+    
+Broadcast or direct message from controller to components, requesting 
+them to pair up with the controller if the `bank` name is a match. 
+Components are expected to reply with a `status` message.
+
+#### `status`
+
+    `> status ident-string`
+    `< status ident-string component-status [controller-uuid]`
+    
+When send by the controller, this is a request for a `status` reply by 
+all applicable components; that is, all components with the same `bank`.
+
+If send by a component, this is a reply to a `status` or `pair` request.
+Informs about the general state of a component, which also indicates 
+whether the component is paired to a controller or not. If paired, 
+the controller UUID is given.
+
+`component-status` can be either of (this is subject to change!):
+
+- `booted`: only basic initialization has been done, not yet paired
+- `paired`: paired with controller, but setup not yet done
+- `setup`:  currently in the setup process
+- `ready`:  setup complete, ready for operation
+- `error`:  not operational due to some error
+
 
 ## Things to look out for
 

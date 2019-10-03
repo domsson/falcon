@@ -28,18 +28,7 @@ debug(string msg)
 /*
  * Send a message to the object with UUID `id`.
  */ 
-send_message(key id, string cmd, string params)
-{
-    string msg = SIGNATURE + " " + cmd + " " + params;
-    llRegionSayTo(id, CHANNEL, msg);
-}
-
-/*
- * Send a message to the object with UUID `id`.
- * Parameters are given as list, use `send_message()` if you want to 
- * hand them in as a string instead.
- */ 
-send_message_l(key id, string cmd, list params)
+send_message(key id, string cmd, list params)
 {
     string msg = SIGNATURE + " " + cmd + " " + llDumpList2String(params, "");
     llRegionSayTo(id, CHANNEL, msg);
@@ -48,18 +37,7 @@ send_message_l(key id, string cmd, list params)
 /*
  * Broadcast a message to all objects in the region.
  */
-send_broadcast(string cmd, string params)
-{
-    string msg = SIGNATURE + " " + cmd + " " + params;
-    llRegionSay(CHANNEL, msg);
-}
-
-/*
- * Broadcast a message to all objects in the region.
- * Parameters are given as list, use `send_broadcast()` if you want to 
- * hand them in as a string instead.
- */
-send_broadcast_l(string cmd, list params)
+send_broadcast(string cmd, list params)
 {
     string msg = SIGNATURE + " " + cmd + " " + llDumpList2String(params, "");
     llRegionSay(CHANNEL, msg);
