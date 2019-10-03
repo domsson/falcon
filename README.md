@@ -194,7 +194,7 @@ The same general logic as for the cab subcomponent initialization
 applies, see above.
 
 
-## Description string syntax
+## Identifier string syntax (`ident-string`)
 
 Each main component needs to have certain information present in its 
 description field, which will be used for initialization. This is 
@@ -202,8 +202,12 @@ different from the Delta, which will use more advanced logic instead.
 However, using a description string is a very solid approach that allows 
 for relatively simple script logic and isn't too hard to set up either.
 
-The general syntax is `bank:shaft:floor`, but depending on the 
-component, only some of that information is required:
+The general syntax of the `ident-string` is as follows:
+  
+    bank:shaft:floor
+    
+Depending on the component, only some of that information might be 
+required:
 
 | component      | description syntax | example                        |
 |----------------|--------------------|--------------------------------|
@@ -229,7 +233,11 @@ bytes available for the payload.
 
 The general message syntax is as follows:
 
-`signature command parameters`
+    signature ident-string command parameters
+    
+Example:
+
+    falcon-cab bank1:shaft2 status ready
 
 #### Message syntax: signature
 
@@ -268,7 +276,7 @@ components, `<` is a message from a component to the controller.
 
 #### `ping`
 
-    `> ping ident-string`
+    `> ping`
     
 Broadcast message to scan the sim for components. Matching components 
 (those with the same `bank` name) should reply to the sender via `pong`. 
@@ -277,14 +285,14 @@ which for the controller is simply the `bank` name.
 
 #### `pong`
 
-    `< pong ident-string`
+    `< pong`
     
 A component's reply to a controller's `ping` message, given that their 
 `bank` names are a match.
 
 #### `pair`
 
-    `> pair ident-string`
+    `> pair`
     
 Broadcast or direct message from controller to components, requesting 
 them to pair up with the controller if the `bank` name is a match. 
@@ -292,8 +300,8 @@ Components are expected to reply with a `status` message.
 
 #### `status`
 
-    `> status ident-string`
-    `< status ident-string component-status [controller-uuid]`
+    `> status`
+    `< status component-status [controller-uuid]`
     
 When send by the controller, this is a request for a `status` reply by 
 all applicable components; that is, all components with the same `bank`.

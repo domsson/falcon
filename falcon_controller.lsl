@@ -7,6 +7,8 @@ integer NOT_FOUND = -1; // ll* functions often return -1 to indicate 'not found'
 float PAIRING_TIME = 3.0;
 float SETUP_TIME = 6.0;
 
+integer SHAFTS_MAX = 4;
+integer FLOORS_MAX = 16;
 
 // description identifiers
 // 0: bank, 1: shaft, 2: floor
@@ -14,17 +16,17 @@ list identifiers;
 string description;
 
 // list of all `cab` objects
-// [key cab_key, string desc ...]
+// [string ident, key cab_key, ...]
 list    cabs;
 integer cabs_stride = 2;
 
 // list of all `doorway` object
-// [key doorways_key, string desc ...]
+// [string ident, key doorways_key, ...]
 list    doorways;
 integer doorways_stride = 2;
 
 // list of all `call_buttons` objects
-// [key buttons_key, string desc ...]
+// [string desc, key buttons_key, ...]
 list    buttons;
 integer buttons_stride = 2;
 
@@ -139,19 +141,19 @@ send_broadcast(string cmd, list params)
 }
 
 /*
- * Adds the elevator cab with UUID `id` and name `name` 
+ * Adds the elevator cab with UUID `id` and identifier string `ident` 
  * to the list of cabs, unless `id` is already in the list.
  */
-add_cab(key id, string desc)
+add_cab(key id, string ident)
 {
-    cabs = add_component(cabs, id, desc);
+    cabs = add_component(cabs, id, ident);
 }
 
-list add_component(list comps, key id, string desc)
+list add_component(list comps, key id, string ident)
 {
     if (llListFindList(comps, (list) id) == NOT_FOUND)
     {
-        comps += [id, desc];
+        comps += [ident, id];
     }
     return comps;
 }
@@ -160,6 +162,9 @@ integer all_components_in_place()
 {
     // TODO: this needs to check if there are at least two doors for EACH cab,
     //       not just how many cabs/doorways there are in general...
+    
+    doorways = llListSort(doorways, 2, TRUE); // Sort doorways
+    
     if (llGetListLength(cabs) < 1)
     {
         return FALSE;
