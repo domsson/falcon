@@ -55,6 +55,28 @@ list parse_ident(string ident, string sep)
     return [llList2String(tks, 0), llList2String(tks, 1), llList2String(tks, 2)];
 }
 
+/*
+ * Reads the object's description and parses its contents as a list 
+ * of identifiers into the global variable `identifiers`, then returns it.
+ */
+list get_identifiers()
+{
+    if (identifiers == [])
+    {
+        identifiers = parse_ident(llGetObjectDesc(), ":");
+    }
+    return identifiers;
+}
+
+/*
+ * Compares the element at position `idx` from the given list of identifiers
+ * with this object's identifier list and returns TRUE if they are the same.
+ */
+integer ident_matches(list ident, integer idx)
+{
+    return llList2String(get_identifiers(), idx) == llList2String(ident, idx);
+}
+
 process_message(integer chan, string name, key id, string msg)
 {
     // Debug print the received message
@@ -103,15 +125,10 @@ process_message(integer chan, string name, key id, string msg)
     }
 }
 
-integer ident_matches(list ident1, list ident2, integer idx)
-{
-    return llList2String(ident1, idx) == llList2String(ident2, idx);
-}
-
 handle_cmd_ping(string sig, key id, string ident)
 {
     // Abort if `bank` doesn't match
-    if (!ident_matches(identifiers, parse_ident(ident, ":"), IDENT_IDX_BANK))
+    if (!ident_matches(parse_ident(ident, ":"), IDENT_IDX_BANK))
     {
         return;
     }
@@ -122,20 +139,20 @@ handle_cmd_ping(string sig, key id, string ident)
 handle_cmd_pair(string sig, key id, string ident)
 {
     // Abort if `bank` doesn't match
-    if (!ident_matches(identifiers, parse_ident(ident, ":"), IDENT_IDX_BANK))
+    if (!ident_matches(parse_ident(ident, ":"), IDENT_IDX_BANK))
     {
         return;
     }
 
-    // We weren't paired yet, let's do it now
-    if (controller == NULL_KEY)
+    // We were already paired, just let the controller know
+    if (controller == id)
     {
-        set_controller(id);
-        state paired;
+        send_message(id, "status", [current_state, (string) controller]);
+        return;
     }
     
-    // We were already paired, just let the controller know
-    send_message(id, "status", [current_state, (string) controller]);
+    // We weren't paired yet, let's do it now
+    set_controller(id);
 }
 
 handle_cmd_status(string sig, key id, string ident)
@@ -145,16 +162,18 @@ handle_cmd_status(string sig, key id, string ident)
 
 /*
  * Send a message to the object with UUID `id`.
- * Note: this function depends on the globals `SIGNATURE`, `CHANNEL`
- *       and `identifiers`.
+ * Note: this function depends on the globals `SIGNATURE` and `CHANNEL`.
  */ 
 send_message(key id, string cmd, list params)
 {
-    list msg = [SIGNATURE, llDumpList2String(identifiers, ":"),
+    list msg = [SIGNATURE, llDumpList2String(get_identifiers(), ":"),
                 cmd,  llDumpList2String(params, " ")];
     llRegionSayTo(id, CHANNEL, llDumpList2String(msg, " "));
 }
- 
+
+/*
+ * Sets the global variable `controller` to the UUID supplied in `id`.
+ */
 set_controller(key id)
 {
     controller = id;
@@ -164,7 +183,6 @@ integer init()
 {
     uuid = llGetKey();
     owner = llGetOwner();
-    identifiers = parse_ident(llGetObjectDesc(), ":");
     
     llSetLinkPrimitiveParamsFast(LINK_SET,  [PRIM_SCRIPTED_SIT_ONLY, TRUE]);
     llSetLinkPrimitiveParamsFast(LINK_THIS, [PRIM_PHYSICS_SHAPE_TYPE, PRIM_PHYSICS_SHAPE_CONVEX]);
@@ -208,6 +226,12 @@ state booted
     listen(integer channel, string name, key id, string message)
     {
         process_message(channel, name, id, message);
+    
+        // Check if we've been paired and change state if so
+        if (controller != NULL_KEY)
+        {
+            state paired;
+        }
     }
     
     state_exit()
@@ -232,7 +256,7 @@ state paired
         
         // We could only listen for messages by the controller as we now know 
         // its UUID; however, that could get us stuck if the controller UUID 
-        // ever changes to to re-rez or region restart or what-not
+        // ever changes and we need to re-pair with a new controller
         listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
     }
     
@@ -243,5 +267,64 @@ state paired
     
     state_exit()
     {
+        // Nothing yet
+    }
+}
+
+state setup
+{
+    state_entry()
+    {
+        // Nothing yet
+    }
+
+    listen(integer channel, string name, key id, string message)
+    {
+        process_message(channel, name, id, message);
+    }
+
+    state_exit()
+    {
+        // Nothing yet
+    }
+}
+
+/*
+ * This is the main operational state. It means the component is all set up 
+ * and should operate as intended. 
+ */
+state ready
+{
+    state_entry()
+    {
+        // Nothing yet
+    }
+
+    listen(integer channel, string name, key id, string message)
+    {
+        process_message(channel, name, id, message);
+    }
+     
+    state_exit()
+    {
+        // Nothing yet
+    }
+}
+
+/*
+ * If the component runs into a non-recoverable error, it might enter this 
+ * state, so it can signal the problem to the controller and leave it to the 
+ * controller to decide on what to do.
+ */ 
+state error
+{
+    state_entry()
+    {
+        // Nothing yet
+    }
+     
+    state_exit()
+    {
+        // Nothing yet
     }
 }

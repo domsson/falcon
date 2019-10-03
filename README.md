@@ -311,7 +311,7 @@ Informs about the general state of a component, which also indicates
 whether the component is paired to a controller or not. If paired, 
 the controller UUID is given.
 
-`component-status` can be either of (this is subject to change!):
+`component-status` can be either of the following (subject to change):
 
 - `booted`: only basic initialization has been done, not yet paired
 - `paired`: paired with controller, but setup not yet done

@@ -77,6 +77,28 @@ list parse_ident(string ident, string sep)
     return [llList2String(tks, 0), llList2String(tks, 1), llList2String(tks, 2)];
 }
 
+/*
+ * Reads the object's description and parses its contents as a list 
+ * of identifiers into the global variable `identifiers`, then returns it.
+ */
+list get_identifiers()
+{
+    if (identifiers == [])
+    {
+        identifiers = parse_ident(llGetObjectDesc(), ":");
+    }
+    return identifiers;
+}
+
+/*
+ * Compares the element at position `idx` from the given list of identifiers
+ * with this object's identifier list and returns TRUE if they are the same.
+ */
+integer ident_matches(list ident, integer idx)
+{
+    return llList2String(get_identifiers(), idx) == llList2String(ident, idx);
+}
+
 process_message(integer chan, string name, key id, string msg)
 {
     // Debug print the received message
@@ -139,24 +161,22 @@ handle_cmd_status(string sig, key id, string ident, list params)
 
 /*
  * Send a message to the object with UUID `id`.
- * Note: this function depends on the globals `SIGNATURE`, `CHANNEL`
- *       and `identifiers`.
+ * Note: this function depends on the globals `SIGNATURE` and `CHANNEL`.
  */ 
 send_message(key id, string cmd, list params)
 {
-    list msg = [SIGNATURE, llDumpList2String(identifiers, ":"),
+    list msg = [SIGNATURE, llDumpList2String(get_identifiers(), ":"),
                 cmd,  llDumpList2String(params, " ")];
     llRegionSayTo(id, CHANNEL, llDumpList2String(msg, " "));
 }
 
 /*
  * Broadcast a message to all objects in the region.
- * Note: this function depends on the globals `SIGNATURE`, `CHANNEL`
- *       and `identifiers`.
+ * Note: this function depends on the globals `SIGNATURE` and `CHANNEL`.
  */
 send_broadcast(string cmd, list params)
 {
-    list msg = [SIGNATURE, llDumpList2String(identifiers, ":"),
+    list msg = [SIGNATURE, llDumpList2String(get_identifiers(), ":"),
                 cmd,  llDumpList2String(params, " ")];
     llRegionSay(CHANNEL, llDumpList2String(msg, " "));
 }
@@ -240,8 +260,7 @@ integer init()
 {
     uuid = llGetKey();
     owner = llGetOwner();
-    identifiers = parse_ident(llGetObjectDesc(), ":");
-    
+        
     return TRUE;
 }
 
@@ -253,7 +272,7 @@ default
         init();
     }
 
-    touch_start(integer total_number)
+    touch_end(integer total_number)
     {
         state pairing; 
     }
@@ -265,8 +284,9 @@ default
 }
 
 /*
- * Broadcasting a pairing request to all objects in in the region, then waiting
- * for a reply from suitable components (same owner, same elevator bank).
+ * Broadcast a pairing request to all objects in in the region, then wait
+ * for a reply from suitable components (same owner, same elevator bank) 
+ * and keep track of them.
  */
 state pairing
 {
@@ -303,7 +323,7 @@ state pairing
     
     state_exit()
     {
-        // Nothing (yet)
+        llSetTimerEvent(0.0);
     }
 }
 
@@ -343,7 +363,7 @@ state setup
     
     state_exit()
     {
-        // Nothing yet
+        llSetTimerEvent(0.0);
     }
 }
 
