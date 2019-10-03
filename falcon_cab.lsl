@@ -1,15 +1,25 @@
 // CONSTS
 integer DEBUG = TRUE;
-string  SIGNATURE = "falcon-cab";
 integer CHANNEL = -130104;
+string  SIGNATURE = "falcon-cab";
+
+string SIG_CONTROLLER = "falcon-control";
+
 integer NOT_FOUND = -1; // ll* functions often return -1 to indicate 'not found'
+float   FLOAT_MAX = 3.402823466E+38;
 
+integer MSG_IDX_SIG    = 0;
+integer MSG_IDX_IDENT  = 1;
+integer MSG_IDX_CMD    = 2;
+integer MSG_IDX_PARAMS = 3;
 
+integer IDENT_IDX_BANK  = 0;
+integer IDENT_IDX_SHAFT = 1;
+integer IDENT_IDX_FLOOR = 2;
 
 // description identifiers
 // 0: bank, 1: shaft, 2: floor
 list identifiers;
-string description;
 
 // important objects/ids
 key uuid = NULL_KEY;
@@ -32,16 +42,16 @@ debug(string msg)
 }
 
 /*
- * Parses the object's description string into a list of 3 elements, using `sep` 
+ * Parses an identifier string into a list of 3 elements, using `sep` 
  * as the separator to split the string into tokens. See these examples:
- * - parse_desc("bank1:cab1:7", ":") => ["bank1", "cab1", "7"]
- * - parse_desc("bank1", ":")        => ["bank1", "", ""]
- * - parse_desc("bank1::4, ":")      => ["bank1", "", "4"]
- * - parse_desc("", ":")             => ["", "", ""]
+ * - parse_ident("bank1:shaft1:7", ":") => ["bank1", "shaft1", "7"]
+ * - parse_ident("bank1", ":")          => ["bank1", "", ""]
+ * - parse_ident("bank1::4, ":")        => ["bank1", "", "4"]
+ * - parse_ident("", ":")               => ["", "", ""]
  */
-list parse_desc(string sep)
+list parse_ident(string ident, string sep)
 {
-    list tks = llParseString2List(llGetObjectDesc(), [sep], []);
+    list tks = llParseString2List(ident, [sep], []);
     return [llList2String(tks, 0), llList2String(tks, 1), llList2String(tks, 2)];
 }
 
@@ -63,50 +73,56 @@ process_message(integer chan, string name, key id, string msg)
     // Split the message on spaces and extract the first two tokens
     list    tokens     = llParseString2List(msg, [" "], []);
     integer num_tokens = llGetListLength(tokens);
-    string  signature  = llList2String(tokens, 0);   
-    string  command    = llList2String(tokens, 1);
-    list    parameters = llList2List(tokens, 2, num_tokens - 1);
+    string  signature  = llList2String(tokens, MSG_IDX_SIG);
+    string  ident      = llList2String(tokens, MSG_IDX_IDENT);
+    string  command    = llList2String(tokens, MSG_IDX_CMD);
+    list    params     = llList2List(tokens, MSG_IDX_PARAMS, num_tokens - 1);
     
     // Abort if the message didn't come from a controller
-    if (signature != "falcon-control")
+    if (signature != SIG_CONTROLLER)
     {
         return;
     }
     
     if (command == "ping")
     {
-        handle_cmd_ping(signature, id, parameters);
+        handle_cmd_ping(signature, id, ident);
         return;
     }
     
     if (command == "pair")
     {
-        handle_cmd_pair(signature, id, parameters);
+        handle_cmd_pair(signature, id, ident);
         return;
     }
     
     if (command == "status")
     {
-        handle_cmd_status(signature, id);
+        handle_cmd_status(signature, id, ident);
         return;
     }
 }
 
-handle_cmd_ping(string sig, key id, list params)
+integer ident_matches(list ident1, list ident2, integer idx)
+{
+    return llList2String(ident1, idx) == llList2String(ident2, idx);
+}
+
+handle_cmd_ping(string sig, key id, string ident)
 {
     // Abort if `bank` doesn't match
-    if (llList2String(params, 0) != llList2String(identifiers, 0))
+    if (!ident_matches(identifiers, parse_ident(ident, ":"), IDENT_IDX_BANK))
     {
         return;
     }
     
-    send_message(id, "pong", [llGetObjectDesc()]);
+    send_message(id, "pong", []);
 }
 
-handle_cmd_pair(string sig, key id, list params)
+handle_cmd_pair(string sig, key id, string ident)
 {
     // Abort if `bank` doesn't match
-    if (llList2String(params, 0) != llList2String(identifiers, 0))
+    if (!ident_matches(identifiers, parse_ident(ident, ":"), IDENT_IDX_BANK))
     {
         return;
     }
@@ -122,18 +138,21 @@ handle_cmd_pair(string sig, key id, list params)
     send_message(id, "status", [current_state, (string) controller]);
 }
 
-handle_cmd_status(string sig, key id)
+handle_cmd_status(string sig, key id, string ident)
 {
     send_message(id, "status", [current_state, (string) controller]);
 }
 
 /*
  * Send a message to the object with UUID `id`.
+ * Note: this function depends on the globals `SIGNATURE`, `CHANNEL`
+ *       and `identifiers`.
  */ 
 send_message(key id, string cmd, list params)
 {
-    string msg = SIGNATURE + " " + cmd + " " + llDumpList2String(params, "");
-    llRegionSayTo(id, CHANNEL, msg);
+    list msg = [SIGNATURE, llDumpList2String(identifiers, ":"),
+                cmd,  llDumpList2String(params, " ")];
+    llRegionSayTo(id, CHANNEL, llDumpList2String(msg, " "));
 }
  
 set_controller(key id)
@@ -145,8 +164,7 @@ integer init()
 {
     uuid = llGetKey();
     owner = llGetOwner();
-    description = llGetObjectDesc();
-    identifiers = parse_desc(":");
+    identifiers = parse_ident(llGetObjectDesc(), ":");
     
     llSetLinkPrimitiveParamsFast(LINK_SET,  [PRIM_SCRIPTED_SIT_ONLY, TRUE]);
     llSetLinkPrimitiveParamsFast(LINK_THIS, [PRIM_PHYSICS_SHAPE_TYPE, PRIM_PHYSICS_SHAPE_CONVEX]);
