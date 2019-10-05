@@ -40,10 +40,11 @@ integer doorways_stride = 4;
 list    buttons;
 integer buttons_stride = 2;
 
-// [string name, float doorway_offset...]
+// [string name, float doorway_offset, integer recall_floor...]
 list    shafts;
-integer shafts_stride = 2;
+integer shafts_stride = 3;
 
+// TODO: we might have to add 'integer recall'
 // [float z-pos, string name, ...]
 list    floors;
 integer floors_stride = 2;
@@ -235,7 +236,7 @@ integer add_cab(key uuid, string shaft)
     }
     
     // Add the shaft
-    shafts += [shaft, 0.0];
+    shafts += [shaft, 0.0, 0];
     
     return TRUE;
 }
@@ -282,12 +283,18 @@ integer add_doorway(key uuid, float z, string floor, string shaft)
 
 integer add_buttons(key uuid, string floor)
 {
-    if (llListFindList(buttons, (list) uuid) == NOT_FOUND)
+    // Buttons with that UUID have already been added
+    if (llListFindList(buttons, (list) uuid) != NOT_FOUND)
     {
-        buttons += [floor, uuid];
-        return TRUE;
+        return FALSE;
     }
-    return FALSE;
+    
+    // We explicitly allow for several button objects that operate on
+    // the same floor, so we aren't going to check if there is already
+    // a button object for the given floor in the list.
+    
+    buttons += [floor, uuid];
+    return TRUE;
 }
 
 /*
@@ -339,24 +346,57 @@ find_closest_doorways()
         
         integer doorway_index = get_closest_doorway(pos.z, cab_shaft);
         
+        // Add the recall_floor index to the shafts lists
+        // doorways: [float z-pos, string floor, string shaft, key uuid, ...]
+        string floor = llList2String(doorways, doorway_index * doorways_stride + 1);
+        set_recall_floor(cab_shaft, floor);
+        
         debug("Closest doorway for " + cab_shaft + ": " + (string) doorway_index);
     }
 }
 
-integer all_components_in_place()
+/*
+ * Given the strided list `l` (with a stide of `s`), this function attempts 
+ * to find the string member `m`, which is at stride offset `o`, then returns 
+ * the index (at the beginning of the stride) of the element containing it.
+ * If the member couldn't be found, NOT_FOUND (-1) is returned.
+ */
+integer get_strided_index_by_member(list l, integer s, integer o, string m)
 {
-    // TODO: this needs to be rewritten now that the doorway list has
-    //       changed so dramatically compared to its previous form
-      
-    return TRUE;
+    integer num_items = get_strided_length(l, s);
+    integer i;
+    
+    for (i = 0; i < num_items; ++i)
+    {
+        string member = llList2String(l, i * s + o);
+        if (member == m)
+        {
+            return i;
+        }
+    }
+    return NOT_FOUND;
 }
 
-integer num_doorways_per_shaft(string shaft)
+integer set_recall_floor(string shaft, string floor)
 {
-    // TODO: this needs to be rewritten now that the doorway list has
-    //       changed so dramatically compared to its previous form
+    integer floor_index = get_strided_index_by_member(floors, floors_stride, 1, floor);
+    integer shaft_index = get_strided_index_by_member(shafts, shafts_stride, 0, shaft);
     
-    return 0;
+    if (floor_index == NOT_FOUND)
+    {
+        return FALSE;
+    }
+    
+    if (shaft_index == NOT_FOUND)
+    {
+        return FALSE;
+    }
+    
+    // shafts: [string name, float doorway_offset, integer recall_floor...]
+    integer shaft_offset = shaft_index * shafts_stride + 2;
+    
+    shafts = llListReplaceList(shafts, [floor_index], shaft_offset, shaft_offset);
+    return TRUE;
 }
 
 integer all_components_setup()
@@ -372,11 +412,6 @@ sort_components()
     buttons  = llListSort(buttons,  buttons_stride,  TRUE);
     shafts   = llListSort(shafts,   shafts_stride,   TRUE);
     floors   = llListSort(floors,   floors_stride,   TRUE);
-    
-    debug("Floors: "   + llDumpList2String(floors, " "));
-    debug("Doorways: " + llDumpList2String(doorways, " "));
-    debug("Shafts: "   + llDumpList2String(shafts, " "));
-    debug("Cabs: "     + llDumpList2String(cabs, " "));
 }
 
 integer init()
@@ -441,16 +476,13 @@ state pairing
         sort_components();
         find_closest_doorways();
         
-        if (all_components_in_place())
-        {
-            llOwnerSay("Pairing done. Everything is in place.");
-            state setup; 
-        }
-        else
-        {
-            llOwnerSay("Pairing done. Some components are missing.");
-            state default;
-        }
+        debug("Floors: "   + llDumpList2String(floors, " "));
+        debug("Doorways: " + llDumpList2String(doorways, " "));
+        debug("Shafts: "   + llDumpList2String(shafts, " "));
+        debug("Cabs: "     + llDumpList2String(cabs, " "));
+        
+        llOwnerSay("Pairing done.");
+        state setup;
     }
     
     state_exit()
@@ -467,7 +499,7 @@ state setup
         
         debug("Started setup process...");
         debug("Memory usage: " + (string) llGetUsedMemory());
-        // TODO figure out which doorway is 'base' doorway
+        // TODO remember 'base' doorways z-position offset to cab
         // TODO get 'base' doorways position/rotation
         // TODO send 'setup' message to all components
         llSetTimerEvent(SETUP_TIME);
