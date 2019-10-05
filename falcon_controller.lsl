@@ -399,6 +399,22 @@ integer set_recall_floor(string shaft, string floor)
     return TRUE;
 }
 
+list get_doorway_details(integer index)
+{
+    key uuid = llList2Key(doorways, index * doorways_stride + 3);
+    return llGetObjectDetails(uuid, [OBJECT_POS, OBJECT_ROT]);   
+}
+
+integer request_doorway_setup()
+{
+    
+}
+
+integer request_cab_setup()
+{
+    
+}
+
 integer all_components_setup()
 {
     // TODO
@@ -499,9 +515,12 @@ state setup
         
         debug("Started setup process...");
         debug("Memory usage: " + (string) llGetUsedMemory());
-        // TODO remember 'base' doorways z-position offset to cab
+        
         // TODO get 'base' doorways position/rotation
         // TODO send 'setup' message to all components
+        request_doorway_setup();
+        request_cab_setup();
+        
         llSetTimerEvent(SETUP_TIME);
     }
     

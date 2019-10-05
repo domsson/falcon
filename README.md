@@ -276,7 +276,7 @@ components, `<` is a message from a component to the controller.
 
 #### `ping`
 
-    `> ping`
+    > ping
     
 Broadcast message to scan the sim for components. Matching components 
 (those with the same `bank` name) should reply to the sender via `pong`. 
@@ -285,14 +285,14 @@ which for the controller is simply the `bank` name.
 
 #### `pong`
 
-    `< pong`
+    < pong
     
 A component's reply to a controller's `ping` message, given that their 
 `bank` names are a match.
 
 #### `pair`
 
-    `> pair`
+    > pair
     
 Broadcast or direct message from controller to components, requesting 
 them to pair up with the controller if the `bank` name is a match. 
@@ -300,8 +300,8 @@ Components are expected to reply with a `status` message.
 
 #### `status`
 
-    `> status`
-    `< status component-status [controller-uuid]`
+    > status
+    < status component-status [controller-uuid]
     
 When send by the controller, this is a request for a `status` reply by 
 all applicable components; that is, all components with the same `bank`.
