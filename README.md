@@ -10,7 +10,7 @@ will introduce _no-mod_ scripts to a build, which can be an issue.
 
 The Falcon will focus on core features. It does not aim to copy the 
 full feature-set of the Delta. Also, with the target audience being 
-creators, there won't be much effort on marking the setup process 
+creators, there won't be much effort on making the setup process 
 particularly user-friendly.
 
 The goal is to have a solid and versatile script that enables creators 
