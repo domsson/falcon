@@ -405,19 +405,55 @@ list get_doorway_details(integer index)
     return llGetObjectDetails(uuid, [OBJECT_POS, OBJECT_ROT]);   
 }
 
+integer get_recall_floor(string shaft)
+{
+    integer idx = llListFindList(shafts, [shaft]);
+    if (idx == NOT_FOUND)
+    {
+        return NOT_FOUND;
+    }
+    // shafts:   [string name, float doorway_offset, integer recall_floor...]
+    return llList2Integer(shafts, idx + 2);
+}
+
+/*
+ * Returns a list that contains one string for each floor of the given shaft,
+ * consisting of the floor name, a colon (":") and a 0 or 1, depending on 
+ * whether that floor is accessible from the given shaft.
+ * Example: ["B2:1", "B1:1", "1:1", "2:0", "3:1"]
+ */
+list get_floor_info(string shaft)
+{
+    list floor_info = [];
+    
+    integer num_floors = get_strided_length(floors, floors_stride);
+    integer f;
+    
+    for (f = 0; f < num_floors; ++f)
+    {
+        // doorways: [float z-pos, string floor, string shaft, key uuid]
+        // floors:   [float z-pos, string name, ...]
+        
+        float  f_zpos = llList2Float(floors, f * floors_stride + 0);
+        string f_name = llList2String(floors, f * floors_stride + 1);
+        
+        integer accessible = llListFindList(doorways, [f_zpos, f_name, shaft]) != NOT_FOUND;
+        
+        floor_info += [ f_name + ":" + (string) accessible ];
+    }
+    
+    return floor_info;
+}
+
+// TODO: this is MASSIVE... both in size as well as in complexity :(
 integer request_doorway_setup()
 {
-    
     /*
     string pos = (string)pos.x +","+ (string)pos.y +","+ (string)pos.z;
     string rot = (string)rot.x +","+ (string)rot.y +","+ (string)rot.z +","+ (string)rot.s;
      
     // syntax:  "setup posx,posy,posz rotx,roty,rotz,rots"
-    // example: "16.000000,94.221990,27.550000 0.707107,0.000000,0.000000,0.707107"
-    
-    TODO:
-    Or should we add <> around the vectors? Would that enable LSL to parse it,
-    despite the missing spaces between the values (after the ',')? Test this!
+    // example: "16.000000,94.221990,27.550000 0.707107,0.000000,0.000000,0.707107"   
     */
 
     integer num_shafts = get_strided_length(shafts, shafts_stride);
@@ -433,15 +469,28 @@ integer request_doorway_setup()
         list base_doorway_details = get_doorway_details(base_doorway_idx);
         vector base_doorway_pos = llList2Vector(base_doorway_details, 0);
         rotation base_doorway_rot = llList2Rot(base_doorway_details, 1);
+        string f_info = llDumpList2String(get_floor_info(shaft), ",");
+        integer f_recall = get_recall_floor(shaft);
         
         for (d = 0; d < num_doorways; ++d)
         {
+            // doorways: [float z-pos, string floor, string shaft, key uuid]
             key doorway_uuid = llList2Key(doorways, d * doorways_stride + 3);
             string doorway_shaft = llList2String(doorways, d * doorways_stride + 2);
+            string doorway_floor = llList2String(doorways, d * doorways_stride + 1);
+            
+            // floors:   [float z-pos, string name, ...]
+            integer doorway_floor_idx = (llListFindList(floors, [doorway_floor]) - 1) / doorways_stride;                        
             if (doorway_shaft == shaft)
             {
-
-                send_message(doorway_uuid, "setup", [base_doorway_pos, base_doorway_rot]);
+                string pos = "<" + (string) base_doorway_pos.x + "," +
+                                   (string) base_doorway_pos.y + "," + 
+                                   (string) base_doorway_pos.z + ">";
+                string rot = "<" + (string) base_doorway_rot.x + "," + 
+                                   (string) base_doorway_rot.y + "," + 
+                                   (string) base_doorway_rot.z + "," + 
+                                   (string) base_doorway_rot.s + ">";
+                send_message(doorway_uuid, "setup", [pos, rot, f_info, f_recall, doorway_floor_idx]);
             }
         }
     }
@@ -557,7 +606,6 @@ state setup
         debug("Started setup process...");
         debug("Memory usage: " + (string) llGetUsedMemory());
         
-        // TODO get 'base' doorways position/rotation
         // TODO send 'setup' message to all components
         request_doorway_setup();
         request_cab_setup();
