@@ -25,24 +25,28 @@ integer IDENT_IDX_BANK  = 0;
 integer IDENT_IDX_SHAFT = 1;
 integer IDENT_IDX_FLOOR = 2;
 
-// description identifiers
-// 0: bank, 1: shaft, 2: floor
-list   identifiers;
-
 // list of all `cab` objects
-// [string ident, key cab_key, ...]
+// [string shaft, key uuid, ...]
 list    cabs;
 integer cabs_stride = 2;
 
 // list of all `doorway` object
-// [string ident, key doorways_key, ...]
+// [float z-pos, string floor, string shaft, key uuid, ...]
 list    doorways;
-integer doorways_stride = 2;
+integer doorways_stride = 4;
 
 // list of all `call_buttons` objects
-// [string desc, key buttons_key, ...]
+// [string floor, key uuid, ...]
 list    buttons;
 integer buttons_stride = 2;
+
+// [string name, ...]
+list    shafts;
+integer shafts_stride = 1;
+
+// [float z-pos, string name, ...]
+list    floors;
+integer floors_stride = 2;
 
 // important objects/ids
 key uuid  = NULL_KEY;
@@ -63,13 +67,16 @@ debug(string msg)
     }
 }
 
+float round(float val, integer digits)
+{
+    float factor = llPow(10, digits);
+    return llRound(val * factor) / factor;
+}
+
 /*
  * Parses an identifier string into a list of 3 elements, using `sep` 
- * as the separator to split the string into tokens. See these examples:
- * - parse_ident("bank1:shaft1:7", ":") => ["bank1", "shaft1", "7"]
- * - parse_ident("bank1", ":")          => ["bank1", "", ""]
- * - parse_ident("bank1::4, ":")        => ["bank1", "", "4"]
- * - parse_ident("", ":")               => ["", "", ""]
+ * as the separator to split the string into tokens. An empty string 
+ * will yield a list with three empty string elements.
  */
 list parse_ident(string ident, string sep)
 {
@@ -79,15 +86,11 @@ list parse_ident(string ident, string sep)
 
 /*
  * Reads the object's description and parses its contents as a list 
- * of identifiers into the global variable `identifiers`, then returns it.
+ * of three string elements: bank, shaft and floor identifier.
  */
 list get_identifiers()
 {
-    if (identifiers == [])
-    {
-        identifiers = parse_ident(llGetObjectDesc(), ":");
-    }
-    return identifiers;
+    return parse_ident(llGetObjectDesc(), ":");
 }
 
 /*
@@ -102,7 +105,7 @@ integer ident_matches(list ident, integer idx)
 process_message(integer chan, string name, key id, string msg)
 {
     // Debug print the received message
-    debug(" < `" + msg + "`");
+    //debug(" < `" + msg + "`");
     
     // Get details about the sender
     list details = llGetObjectDetails(id, ([OBJECT_NAME, OBJECT_DESC, 
@@ -130,31 +133,43 @@ process_message(integer chan, string name, key id, string msg)
     
     if (command == "status")
     {
-        handle_cmd_status(signature, id, ident, params);
+        handle_cmd_status(signature, id, ident, params, details);
     }
 }
 
 handle_cmd_pong(string sig, key id, string ident)
 {
     // Currently nothing
-    debug("Received PONG from " + sig + " (" + ident + ")");
 }
 
-handle_cmd_status(string sig, key id, string ident, list params)
+handle_cmd_status(string sig, key id, string ident, list params, list details)
 {
     if (sig == "falcon-cab")
     {
-        cabs = add_component(cabs, id, ident);
+        //cabs = add_component(cabs, id, ident);
+        list ident_tokens = parse_ident(ident, ":");
+        add_cab(id, llList2String(ident_tokens, IDENT_IDX_SHAFT));
         return;
     }
     if (sig == "falcon-doorway")
     {
-        doorways = add_component(doorways, id, ident);
+        //doorways = add_component(doorways, id, ident);
+        vector pos = llList2Vector(details, 2);
+        float z = pos.z;
+        list ident_tokens = parse_ident(ident, ":");
+        string floor = llList2String(ident_tokens, IDENT_IDX_FLOOR);
+        string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
+        if (add_doorway(id, z, floor, shaft) == FALSE)
+        {
+            debug("Could not add doorway: " + (string)z + " " + floor + " " + shaft);
+        }
         return;
     }
     if (sig == "falcon-buttons")
     {
-        buttons = add_component(buttons, id, ident);
+        //buttons = add_component(buttons, id, ident);
+        list ident_tokens = parse_ident(ident, ":");
+        add_buttons(id, llList2String(ident_tokens, IDENT_IDX_FLOOR));
         return;
     }
 }
@@ -182,78 +197,113 @@ send_broadcast(string cmd, list params)
 }
 
 /*
- * Adds the elevator cab with UUID `id` and identifier string `ident` 
- * to the list of cabs, unless `id` is already in the list.
+ * Get the length of the strided list `l`, given it's stride length `s`.
  */
-add_cab(key id, string ident)
+integer get_strided_length(list l, integer s)
 {
-    cabs = add_component(cabs, id, ident);
+    return llGetListLength(l) / s;
 }
 
-list add_component(list comps, key id, string ident)
+/*
+ * Adds the elevator cab with UUID `uuid` and shaft name `shaft` 
+ * to the list of cabs, unless `id` is already in the list.
+ */
+integer add_cab(key uuid, string shaft)
 {
-    if (llListFindList(comps, (list) id) == NOT_FOUND)
+    // TODO: implement conflict detection and reporting
+    if (llListFindList(cabs, (list) uuid) == NOT_FOUND)
     {
-        comps += [ident, id];
+        cabs += [shaft, uuid];
     }
-    return comps;
+    if (llListFindList(shafts, (list) shaft) == NOT_FOUND)
+    {
+        shafts += [shaft];
+    }
+    return TRUE; // TODO
+}
+
+integer add_floor(float zpos, string name)
+{
+    integer zpos_idx = llListFindList(floors, (list) zpos);
+    integer name_idx = llListFindList(floors, (list) name);
+    
+    // both found and match:       1
+    // neither found:              0
+    // only one found or mismatch: < 0 or > 1
+    integer idx_match = name_idx - zpos_idx;
+    
+    // Floor not yet in list (success)
+    if (idx_match == 0)
+    {
+        floors += [zpos, name];
+        return 1;
+    }
+    
+    // Floor already in list (not an error)
+    if (idx_match == 1)
+    {
+        return 0;
+    }
+    
+    // Either only zpos or name was found in the list, or both were found 
+    // but didn't match, meaning they are already associated with another
+    // zpos or floor number; either way we have a mismatch (error)
+    return -1;
+}
+
+integer add_doorway(key uuid, float z, string floor, string shaft)
+{
+    float z_rounded = round(z, 2);
+    if (add_floor(z_rounded, floor) == -1)
+    {
+        return FALSE;
+    }
+    doorways += [z_rounded, floor, shaft, uuid];
+    return TRUE;
+}
+
+integer add_buttons(key uuid, string floor)
+{
+    if (llListFindList(buttons, (list) uuid) == NOT_FOUND)
+    {
+        buttons += [floor, uuid];
+        return TRUE;
+    }
+    return FALSE;
 }
 
 integer all_components_in_place()
 {
-    // Sort the doorways (by ident-string, which means by floor)
-    doorways = llListSort(doorways, doorways_stride, TRUE);
-    
-    // Get number of cabs in our list
-    integer num_cabs = llGetListLength(cabs) / cabs_stride;
-    
-    // Abort if we don't know of any cabs
-    if (num_cabs == 0)
-    {
-        return FALSE;
-    }
-    
-    // Go through all cabs and see if there are at least 2 doorways
-    integer i;
-    for (i = 0; i < num_cabs; ++i)
-    {
-        string ident = llList2String(cabs, i * cabs_stride);
-        list tokens = parse_ident(ident, ":");
-        string shaft = llList2String(tokens, IDENT_IDX_SHAFT);
-        integer num_doorways = num_doorways_per_shaft(shaft);
-        if (num_doorways < 2)
-        {
-            return FALSE;
-        }
-    }
-    
+    // TODO: this needs to be rewritten now that the doorway list has
+    //       changed so dramatically compared to its previous form
+      
     return TRUE;
 }
 
 integer num_doorways_per_shaft(string shaft)
 {
-    integer num_doorways = llGetListLength(doorways) / doorways_stride;
-    integer num_doorways_per_shaft = 0;
+    // TODO: this needs to be rewritten now that the doorway list has
+    //       changed so dramatically compared to its previous form
     
-    integer i;
-    for (i = 0; i < num_doorways; ++i)
-    {
-        string ident = llList2String(doorways, i * doorways_stride);
-        list   tokens = parse_ident(ident, ":");
-        
-        if (llList2String(tokens, IDENT_IDX_SHAFT) == shaft)
-        {
-            ++num_doorways_per_shaft;
-        }
-    }
-    
-    return num_doorways_per_shaft;
+    return 0;
 }
 
 integer all_components_setup()
 {
     // TODO
     return FALSE;
+}
+
+sort_components()
+{
+    cabs     = llListSort(cabs,     cabs_stride,     TRUE);
+    doorways = llListSort(doorways, doorways_stride, TRUE);
+    buttons  = llListSort(buttons,  buttons_stride,  TRUE);
+    shafts   = llListSort(shafts,   shafts_stride,   TRUE);
+    floors   = llListSort(floors,   floors_stride,   TRUE);
+    
+    debug(llDumpList2String(floors, " "));
+    debug(llDumpList2String(doorways, " "));
 }
 
 integer init()
@@ -269,6 +319,7 @@ default
     state_entry()
     {
         current_state = "default";
+        debug("Memory usage: " + (string) llGetUsedMemory());
         init();
     }
 
@@ -295,8 +346,9 @@ state pairing
         current_state = "pairing";
         
         listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
-        
+    
         debug("Started pairing process...");
+        debug("Memory usage: " + (string) llGetUsedMemory());
         send_broadcast("pair", []);
         llSetTimerEvent(PAIRING_TIME);
     }
@@ -309,6 +361,12 @@ state pairing
     timer()
     {        
         llSetTimerEvent(0.0);
+        llOwnerSay("cabs: "     + (string) get_strided_length(cabs, cabs_stride));
+        llOwnerSay("doorways: " + (string) get_strided_length(doorways, doorways_stride));
+        llOwnerSay("buttons: "  + (string) get_strided_length(buttons, buttons_stride));
+        
+        sort_components();
+        
         if (all_components_in_place())
         {
             llOwnerSay("Pairing done. Everything is in place.");
@@ -334,7 +392,8 @@ state setup
         current_state = "setup";
         
         debug("Started setup process...");
-        // TODO parse configuration notecard
+        debug("Memory usage: " + (string) llGetUsedMemory());
+        // TODO parse configuration notecard (or maybe not!)
         // TODO figure out which doorway is 'base' doorway
         // TODO get 'base' doorways position/rotation
         // TODO send 'setup' message to all components

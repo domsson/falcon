@@ -101,7 +101,7 @@ out there; one for each of these cases. For now, one will have to do.
 
 1.  **Parse description**  
     On rez, all components read their description and parse `bank` name, 
-    `shaft` name and `floor` number, if applicable
+    `shaft` name and `floor` name, if applicable
 2.  **Setup listener**  
     The `controller` and all components of type `cab`, `doorway` and 
     `call_buttons` set up a listener on the same channel
@@ -111,7 +111,7 @@ out there; one for each of these cases. For now, one will have to do.
 4.  **Confirm pairing**  
     All listening components check if the `bank` name matches their own; 
     if so, they message the `controller` back with a `status` message, 
-    specifying their `shaft` and `floor` number, if applicable
+    specifying their `shaft` and `floor` name, if applicable
 5.  **Remember components**  
     The `controller` creates and maintains a list of all components that 
     reported back
@@ -141,10 +141,10 @@ out there; one for each of these cases. For now, one will have to do.
 11. **Request cab setup**  
     The `controller` sends a message to all `cab`s, instructing them to 
     perform setup; this message includes a list of all `floor`s, 
-    including their z-position, as well as their custom floor 
-    number/names, if any, and whether each `floor` is actually 
-    accessible by that particular `cab` (some floors might not be 
-    accessible by all the `cab`s in a `bank`)
+    including their z-position, as well as their custom floor names, 
+    if any, and whether each `floor` is actually accessible by that 
+    particular `cab` (some floors might not be accessible by all the 
+    `cab`s in a `bank`)
 12. **Perform cab setup**  
     All `cab`s perform setup, including setting up their subcomponents; 
     the `cab`s then send a message back to the `controller`, 
@@ -332,3 +332,13 @@ these things here for now:
 - What happens when everything is taken to inventory and rezzed back?
 - What happens on owner change?
 
+
+## API
+
+If I ever get the Falcon working, I'd like to implement some kind of API 
+that allows outside scripts to hook into the system. The general idea as 
+of now is to have the controller listen for a `subscribe` message on 
+another channel and add all objects that send such a message to a list 
+of subscribers. Then, whenever something of relevance happens, the event 
+can be forwarded to all subscribers. This would allow for people two 
+create scripts for elevator system status panels, elevator engines, etc.

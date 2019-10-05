@@ -17,10 +17,6 @@ integer IDENT_IDX_BANK  = 0;
 integer IDENT_IDX_SHAFT = 1;
 integer IDENT_IDX_FLOOR = 2;
 
-// description identifiers
-// 0: bank, 1: shaft, 2: floor
-list identifiers;
-
 // important objects/ids
 key uuid = NULL_KEY;
 key owner = NULL_KEY;
@@ -57,15 +53,11 @@ list parse_ident(string ident, string sep)
 
 /*
  * Reads the object's description and parses its contents as a list 
- * of identifiers into the global variable `identifiers`, then returns it.
+ * of three string elements: bank, shaft and floor identifier.
  */
 list get_identifiers()
 {
-    if (identifiers == [])
-    {
-        identifiers = parse_ident(llGetObjectDesc(), ":");
-    }
-    return identifiers;
+    return parse_ident(llGetObjectDesc(), ":");
 }
 
 /*
