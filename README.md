@@ -331,6 +331,7 @@ these things here for now:
 - What happens when something gets linked/unlinked?
 - What happens when everything is taken to inventory and rezzed back?
 - What happens on owner change?
+- What happens when a component's description changes after setup?
 
 
 ## API

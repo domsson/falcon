@@ -408,11 +408,52 @@ list get_doorway_details(integer index)
 integer request_doorway_setup()
 {
     
+    /*
+    string pos = (string)pos.x +","+ (string)pos.y +","+ (string)pos.z;
+    string rot = (string)rot.x +","+ (string)rot.y +","+ (string)rot.z +","+ (string)rot.s;
+     
+    // syntax:  "setup posx,posy,posz rotx,roty,rotz,rots"
+    // example: "16.000000,94.221990,27.550000 0.707107,0.000000,0.000000,0.707107"
+    
+    TODO:
+    Or should we add <> around the vectors? Would that enable LSL to parse it,
+    despite the missing spaces between the values (after the ',')? Test this!
+    */
+
+    integer num_shafts = get_strided_length(shafts, shafts_stride);
+    integer s;
+    
+    integer num_doorways = get_strided_length(doorways, doorways_stride);
+    integer d;
+    
+    for (s = 0; s < num_shafts; ++s)
+    {
+        string shaft = llList2String(shafts, s * shafts_stride + 0);
+        integer base_doorway_idx = llList2Integer(shafts, s * shafts_stride + 2);
+        list base_doorway_details = get_doorway_details(base_doorway_idx);
+        vector base_doorway_pos = llList2Vector(base_doorway_details, 0);
+        rotation base_doorway_rot = llList2Rot(base_doorway_details, 1);
+        
+        for (d = 0; d < num_doorways; ++d)
+        {
+            key doorway_uuid = llList2Key(doorways, d * doorways_stride + 3);
+            string doorway_shaft = llList2String(doorways, d * doorways_stride + 2);
+            if (doorway_shaft == shaft)
+            {
+
+                send_message(doorway_uuid, "setup", [base_doorway_pos, base_doorway_rot]);
+            }
+        }
+    }
+    
+    // TODO
+    return TRUE;
 }
 
 integer request_cab_setup()
 {
-    
+    // TODO
+    return FALSE;
 }
 
 integer all_components_setup()
