@@ -148,7 +148,10 @@ handle_cmd_status(string sig, key id, string ident, list params, list details)
     {
         //cabs = add_component(cabs, id, ident);
         list ident_tokens = parse_ident(ident, ":");
-        add_cab(id, llList2String(ident_tokens, IDENT_IDX_SHAFT));
+        if (add_cab(id, llList2String(ident_tokens, IDENT_IDX_SHAFT)) == FALSE)
+        {
+            debug("Could not add cab: " + ident);
+        }
         return;
     }
     if (sig == "falcon-doorway")
@@ -161,7 +164,7 @@ handle_cmd_status(string sig, key id, string ident, list params, list details)
         string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
         if (add_doorway(id, z, floor, shaft) == FALSE)
         {
-            debug("Could not add doorway: " + (string)z + " " + floor + " " + shaft);
+            debug("Could not add doorway: " + ident);
         }
         return;
     }
