@@ -210,16 +210,31 @@ integer get_strided_length(list l, integer s)
  */
 integer add_cab(key uuid, string shaft)
 {
-    // TODO: implement conflict detection and reporting
-    if (llListFindList(cabs, (list) uuid) == NOT_FOUND)
+    // Abort if the cab with this UUID has already been added
+    if (llListFindList(cabs, (list) uuid) != NOT_FOUND)
     {
-        cabs += [shaft, uuid];
+        return FALSE;
     }
-    if (llListFindList(shafts, (list) shaft) == NOT_FOUND)
+    
+    // Abort if a cab for this shaft has already been added
+    if (llListFindList(cabs, (list) shaft) != NOT_FOUND)
     {
-        shafts += [shaft, 0.0];
+        return FALSE;
     }
-    return TRUE; // TODO
+    
+    // Add the cab
+    cabs += [shaft, uuid];
+
+    // Abort if the given shaft has already been added
+    if (llListFindList(shafts, (list) shaft) != NOT_FOUND)
+    {
+        return FALSE;
+    }
+    
+    // Add the shaft
+    shafts += [shaft, 0.0];
+    
+    return TRUE;
 }
 
 integer add_floor(float zpos, string name)
