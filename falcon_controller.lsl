@@ -40,9 +40,9 @@ integer doorways_stride = 4;
 list    buttons;
 integer buttons_stride = 2;
 
-// [string name, ...]
+// [string name, float doorway_offset...]
 list    shafts;
-integer shafts_stride = 1;
+integer shafts_stride = 2;
 
 // [float z-pos, string name, ...]
 list    floors;
@@ -63,7 +63,7 @@ debug(string msg)
 {
     if (DEBUG)
     {
-        llOwnerSay(llGetScriptName() + "@" + llGetObjectName() + ": " + msg);
+        llOwnerSay(msg);
     }
 }
 
@@ -217,7 +217,7 @@ integer add_cab(key uuid, string shaft)
     }
     if (llListFindList(shafts, (list) shaft) == NOT_FOUND)
     {
-        shafts += [shaft];
+        shafts += [shaft, 0.0];
     }
     return TRUE; // TODO
 }
@@ -272,6 +272,59 @@ integer add_buttons(key uuid, string floor)
     return FALSE;
 }
 
+/*
+ * Returns the index of the given shaft's doorway that is closest to the given
+ * z-position or NOT_FOUND if we don't know of any doorways for that shaft yet.
+ */
+integer get_closest_doorway(float zpos, string shaft)
+{
+    integer closest_doorway  = -1;
+    float   closest_distance = FLOAT_MAX;
+    
+    // doorways list:
+    //         0             1             2          3
+    // [float z-pos, string floor, string shaft, key uuid, ...]
+    
+    integer i;
+    integer num_doorways = get_strided_length(doorways, doorways_stride);
+    for (i = 0; i < num_doorways; ++i)
+    {
+        string doorway_shaft = llList2String(doorways, i * doorways_stride + 2);
+        if (shaft == doorway_shaft)
+        {
+            float doorway_zpos = llList2Float(doorways, i * doorways_stride + 0);
+            float distance = llFabs(doorway_zpos - zpos);
+        
+            if (distance < closest_distance)
+            {
+                closest_doorway  = i;
+                closest_distance = distance;
+            }
+        }
+    }
+    return closest_doorway;
+}
+
+// TODO temp function for testing get_closest_doorway()
+find_closest_doorways()
+{
+    integer num_cabs = get_strided_length(cabs, cabs_stride);
+    integer i;
+    
+    for (i = 0; i < num_cabs; ++i)
+    {
+        key    cab_uuid  = llList2Key(cabs,    i * cabs_stride + 1);
+        string cab_shaft = llList2String(cabs, i * cabs_stride + 0);
+        
+        list   details  = llGetObjectDetails(cab_uuid, ([OBJECT_POS]));
+        vector pos      = llList2Vector(details, 0);
+        
+        integer doorway_index = get_closest_doorway(pos.z, cab_shaft);
+        
+        debug("Closest doorway for " + cab_shaft + ": " + (string) doorway_index);
+    }
+}
+
 integer all_components_in_place()
 {
     // TODO: this needs to be rewritten now that the doorway list has
@@ -302,8 +355,10 @@ sort_components()
     shafts   = llListSort(shafts,   shafts_stride,   TRUE);
     floors   = llListSort(floors,   floors_stride,   TRUE);
     
-    debug(llDumpList2String(floors, " "));
-    debug(llDumpList2String(doorways, " "));
+    debug("Floors: "   + llDumpList2String(floors, " "));
+    debug("Doorways: " + llDumpList2String(doorways, " "));
+    debug("Shafts: "   + llDumpList2String(shafts, " "));
+    debug("Cabs: "     + llDumpList2String(cabs, " "));
 }
 
 integer init()
@@ -361,11 +416,12 @@ state pairing
     timer()
     {        
         llSetTimerEvent(0.0);
-        llOwnerSay("cabs: "     + (string) get_strided_length(cabs, cabs_stride));
-        llOwnerSay("doorways: " + (string) get_strided_length(doorways, doorways_stride));
-        llOwnerSay("buttons: "  + (string) get_strided_length(buttons, buttons_stride));
+        llOwnerSay("Cabs: "     + (string) get_strided_length(cabs, cabs_stride));
+        llOwnerSay("Doorways: " + (string) get_strided_length(doorways, doorways_stride));
+        llOwnerSay("Buttons: "  + (string) get_strided_length(buttons, buttons_stride));
         
         sort_components();
+        find_closest_doorways();
         
         if (all_components_in_place())
         {
@@ -393,7 +449,6 @@ state setup
         
         debug("Started setup process...");
         debug("Memory usage: " + (string) llGetUsedMemory());
-        // TODO parse configuration notecard (or maybe not!)
         // TODO figure out which doorway is 'base' doorway
         // TODO get 'base' doorways position/rotation
         // TODO send 'setup' message to all components
