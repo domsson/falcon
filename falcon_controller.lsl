@@ -1,4 +1,7 @@
-// CONSTS
+////////////////////////////////////////////////////////////////////////////////
+////  GENERAL CONSTANTS                                                     ////
+////////////////////////////////////////////////////////////////////////////////
+
 integer DEBUG = TRUE;
 integer CHANNEL = -130104;
 string  SIGNATURE = "falcon-control";
@@ -24,6 +27,10 @@ integer MSG_IDX_PARAMS = 3;
 integer IDENT_IDX_BANK  = 0;
 integer IDENT_IDX_SHAFT = 1;
 integer IDENT_IDX_FLOOR = 2;
+
+////////////////////////////////////////////////////////////////////////////////
+////  MAIN DATA STRUCTURES                                                  ////
+////////////////////////////////////////////////////////////////////////////////
 
 // List of all `cab` objects operating in this bank
 // [string shaft, key uuid, ...]
@@ -68,6 +75,10 @@ integer FLOORS_STRIDE = 2;
 integer FLOORS_IDX_ZPOS = 0;
 integer FLOORS_IDX_NAME = 1;
 
+////////////////////////////////////////////////////////////////////////////////
+////  OTHER SCRIPT STATE GLOBALS                                            ////
+////////////////////////////////////////////////////////////////////////////////
+
 // important objects/ids
 key uuid  = NULL_KEY;
 key owner = NULL_KEY;
@@ -75,6 +86,10 @@ key owner = NULL_KEY;
 // state etc
 integer listen_handle;
 string current_state;
+
+////////////////////////////////////////////////////////////////////////////////
+////  FUNCTIONS                                                             ////
+////////////////////////////////////////////////////////////////////////////////
 
 /*
  * Debug output `msg` via llOwnerSay if the global variable DEBUG is TRUE
@@ -508,21 +523,20 @@ sort_components()
     floors = llListSort(floors, FLOORS_STRIDE, TRUE);
 }
 
-integer init()
-{
-    uuid = llGetKey();
-    owner = llGetOwner();
-        
-    return TRUE;
-}
+////////////////////////////////////////////////////////////////////////////////
+////  STATES                                                                ////
+////////////////////////////////////////////////////////////////////////////////
 
 default
 {
     state_entry()
     {
         current_state = "default";
-        debug("Memory usage: " + (string) llGetUsedMemory());
-        init();
+        debug("State: " + current_state + "\nMemory: " + (string) llGetUsedMemory() + " bytes");
+        
+        // Basic initialization
+        uuid  = llGetKey();
+        owner = llGetOwner();
     }
 
     touch_end(integer total_number)
@@ -546,11 +560,10 @@ state pairing
     state_entry()
     {
         current_state = "pairing";
-        
+        debug("State: " + current_state + "\nMemory: " + (string) llGetUsedMemory() + " bytes");
+                
         listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
-    
-        debug("Started pairing process...");
-        debug("Memory usage: " + (string) llGetUsedMemory());
+
         send_broadcast("pair", []);
         llSetTimerEvent(PAIRING_TIME);
     }
@@ -594,9 +607,7 @@ state setup
     state_entry()
     {
         current_state = "setup";
-        
-        debug("Started setup process...");
-        debug("Memory usage: " + (string) llGetUsedMemory());
+        debug("State: " + current_state + "\nMemory: " + (string) llGetUsedMemory() + " bytes");
         
         // TODO send 'setup' message to all components
         request_doorway_setup();
@@ -621,7 +632,7 @@ state setup
         else
         {
             llOwnerSay("Setup failed.");
-            state default;
+            llResetScript();
         }
     }
     
@@ -636,8 +647,7 @@ state ready
     state_entry()
     {
         current_state = "ready";
-        
-        debug("System is in operation...");
+        debug("State: " + current_state + "\nMemory: " + (string) llGetUsedMemory() + " bytes");
     }
     
     listen(integer channel, string name, key id, string message)
