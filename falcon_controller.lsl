@@ -103,6 +103,11 @@ debug(string msg)
     }
 }
 
+print_state_info()
+{
+     debug("State: " + current_state + " (" + (string) llGetUsedMemory() + ")");
+}
+
 /*
  * Rounds the given float to the given number of digits in the fractional part.
  */
@@ -634,7 +639,7 @@ default
     state_entry()
     {
         current_state = "default";
-        debug("State: " + current_state + "\nMemory: " + (string) llGetUsedMemory() + " bytes");
+        print_state_info();
         
         // Basic initialization
         uuid  = llGetKey();
@@ -662,7 +667,7 @@ state pairing
     state_entry()
     {
         current_state = "pairing";
-        debug("State: " + current_state + "\nMemory: " + (string) llGetUsedMemory() + " bytes");
+        print_state_info();
                 
         listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
 
@@ -678,22 +683,9 @@ state pairing
     timer()
     {        
         llSetTimerEvent(0.0);
-        /*
-        llOwnerSay("Cabs: "     + (string) get_strided_length(cabs, CABS_STRIDE));
-        llOwnerSay("Doorways: " + (string) get_strided_length(doorways, DOORWAYS_STRIDE));
-        llOwnerSay("Buttons: "  + (string) get_strided_length(buttons, BUTTONS_STRIDE));
-        */
         
         sort_components();
-        init_recall_floors();
-        
-        /*
-        debug("Floors: "   + llDumpList2String(floors, " "));
-        debug("Doorways: " + llDumpList2String(doorways, " "));
-        debug("Shafts: "   + llDumpList2String(shafts, " "));
-        debug("Cabs: "     + llDumpList2String(cabs, " "));
-        */
-        
+
         llOwnerSay("Pairing done.");
         state setup;
     }
@@ -709,7 +701,7 @@ state setup
     state_entry()
     {
         current_state = "setup";
-        debug("State: " + current_state + "\nMemory: " + (string) llGetUsedMemory() + " bytes");
+        print_state_info();
         
         // TODO send 'setup' message to all components
         request_doorway_setup();
@@ -749,7 +741,7 @@ state ready
     state_entry()
     {
         current_state = "ready";
-        debug("State: " + current_state + "\nMemory: " + (string) llGetUsedMemory() + " bytes");
+        print_state_info();
     }
     
     listen(integer channel, string name, key id, string message)
