@@ -25,27 +25,31 @@ integer IDENT_IDX_BANK  = 0;
 integer IDENT_IDX_SHAFT = 1;
 integer IDENT_IDX_FLOOR = 2;
 
-// list of all `cab` objects
+// List of all `cab` objects operating in this bank
 // [string shaft, key uuid, ...]
 list    cabs;
 integer cabs_stride = 2;
 
-// list of all `doorway` object
+// List of all `doorway` objects for this bank
+// TODO: should we store floor index instead of floor name?
 // [string floor, string shaft, key uuid, ...]
 list    doorways;
 integer doorways_stride = 3;
 
-// list of all `call_buttons` objects
+// List of all `call_buttons` objects for this bank
 // [string floor, key uuid, ...]
 list    buttons;
 integer buttons_stride = 2;
 
+// List of all elevator shafts in this bank
+// TODO: should we store floor name instead of index?
 // [string name, float doorway_offset, integer recall_floor...]
 list    shafts;
 integer shafts_stride = 3;
 
-// TODO: we might have to add 'integer recall'
-// [float z-pos, string name, ...]
+// List of all floors
+// Order important: lowest floor (zpos) first!
+// [float zpos, string name, ...]
 list    floors;
 integer floors_stride = 2;
 
@@ -92,15 +96,6 @@ list parse_ident(string ident, string sep)
 list get_identifiers()
 {
     return parse_ident(llGetObjectDesc(), ":");
-}
-
-/*
- * Compares the element at position `idx` from the given list of identifiers
- * with this object's identifier list and returns TRUE if they are the same.
- */
-integer ident_matches(list ident, integer idx)
-{
-    return llList2String(get_identifiers(), idx) == llList2String(ident, idx);
 }
 
 process_message(integer chan, string name, key id, string msg)
@@ -255,25 +250,25 @@ integer add_floor(float zpos, string name)
     if (idx_match == 0)
     {
         floors += [zpos, name];
-        return 1;
+        return TRUE;
     }
     
     // Floor already in list (not an error)
     if (idx_match == 1)
     {
-        return 0;
+        return TRUE;
     }
     
-    // Either only zpos or name was found in the list, or both were found 
-    // but didn't match, meaning they are already associated with another
-    // zpos or floor number; either way we have a mismatch (error)
-    return -1;
+    // Either only zpos or name was found in the list, or both were found but 
+    // didn't match, meaning they are already associated with a different zpos 
+    // or floor number accordingly; either way: we have a mismatch (error)
+    return FALSE;
 }
 
 integer add_doorway(key uuid, float z, string floor, string shaft)
 {
     float z_rounded = round(z, 2);
-    if (add_floor(z_rounded, floor) == -1)
+    if (add_floor(z_rounded, floor) == FALSE)
     {
         return FALSE;
     }
@@ -291,12 +286,14 @@ integer add_buttons(key uuid, string floor)
     
     // We explicitly allow for several button objects that operate on
     // the same floor, so we aren't going to check if there is already
-    // a button object for the given floor in the list.
-    
+    // a button object for the given floor in the list.    
     buttons += [floor, uuid];
     return TRUE;
 }
 
+/*
+ * Return the z-position for this doorway as per the floors list.
+ */
 float get_doorway_zpos(string floor)
 {
     // floors: [float z-pos, string name, ...]
@@ -337,9 +334,31 @@ integer get_closest_doorway(float zpos, string shaft)
     return closest_doorway;
 }
 
-// TODO temp function for testing get_closest_doorway()
-find_closest_doorways()
+integer set_recall_floor(string shaft, string floor)
 {
+    integer floor_index = get_strided_index_by_member(floors, floors_stride, 1, floor);
+    integer shaft_index = get_strided_index_by_member(shafts, shafts_stride, 0, shaft);
+    
+    if (floor_index == NOT_FOUND)
+    {
+        return FALSE;
+    }
+    
+    if (shaft_index == NOT_FOUND)
+    {
+        return FALSE;
+    }
+    
+    // shafts: [string name, float doorway_offset, integer recall_floor...]
+    integer shaft_offset = shaft_index * shafts_stride + 2;
+    
+    shafts = llListReplaceList(shafts, [floor_index], shaft_offset, shaft_offset);
+    return TRUE;
+}
+
+init_recall_floors()
+{
+    /*
     integer num_cabs = get_strided_length(cabs, cabs_stride);
     integer i;
     
@@ -347,6 +366,32 @@ find_closest_doorways()
     {
         key    cab_uuid  = llList2Key(cabs,    i * cabs_stride + 1);
         string cab_shaft = llList2String(cabs, i * cabs_stride + 0);
+        
+        list   details  = llGetObjectDetails(cab_uuid, ([OBJECT_POS]));
+        vector pos      = llList2Vector(details, 0);
+        
+        integer doorway_index = get_closest_doorway(pos.z, cab_shaft);
+        
+        // Add the recall_floor index to the shafts lists
+        // doorways: [string floor, string shaft, key uuid, ...]
+        string floor = llList2String(doorways, doorway_index * doorways_stride + 0);
+        set_recall_floor(cab_shaft, floor);
+        
+        debug("Closest doorway for " + cab_shaft + ": " + (string) doorway_index);
+    }
+    */
+    integer num_shafts = get_strided_length(shafts, shafts_stride);
+    integer i;
+    
+    for (i = 0; i < num_shafts; ++i)
+    {
+        // shafts: [string name, float doorway_offset, integer recall_floor...]
+        string cab_shaft = llList2String(shafts, i * shafts_stride + 0);
+        // cabs: [string shaft, key uuid, ...]
+        key   cab_uuid = llList2Key(cabs, llListFindList(cabs, [cab_shaft]) + 1);
+        
+        //key    cab_uuid  = llList2Key(cabs,    i * cabs_stride + 1);
+        //string cab_shaft = llList2String(cabs, i * cabs_stride + 0);
         
         list   details  = llGetObjectDetails(cab_uuid, ([OBJECT_POS]));
         vector pos      = llList2Vector(details, 0);
@@ -384,27 +429,7 @@ integer get_strided_index_by_member(list l, integer s, integer o, string m)
     return NOT_FOUND;
 }
 
-integer set_recall_floor(string shaft, string floor)
-{
-    integer floor_index = get_strided_index_by_member(floors, floors_stride, 1, floor);
-    integer shaft_index = get_strided_index_by_member(shafts, shafts_stride, 0, shaft);
-    
-    if (floor_index == NOT_FOUND)
-    {
-        return FALSE;
-    }
-    
-    if (shaft_index == NOT_FOUND)
-    {
-        return FALSE;
-    }
-    
-    // shafts: [string name, float doorway_offset, integer recall_floor...]
-    integer shaft_offset = shaft_index * shafts_stride + 2;
-    
-    shafts = llListReplaceList(shafts, [floor_index], shaft_offset, shaft_offset);
-    return TRUE;
-}
+
 
 list get_doorway_details(integer index)
 {
@@ -587,7 +612,7 @@ state pairing
         llOwnerSay("Buttons: "  + (string) get_strided_length(buttons, buttons_stride));
         
         sort_components();
-        find_closest_doorways();
+        init_recall_floors();
         
         debug("Floors: "   + llDumpList2String(floors, " "));
         debug("Doorways: " + llDumpList2String(doorways, " "));
