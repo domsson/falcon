@@ -522,6 +522,9 @@ list get_floor_info(string shaft)
  * Gathers all the information that the doorways need to perform setup, then 
  * sends a setup request message with all that information to the doorways.
  * Returns the number of doorways that were messaged.
+ *
+ * TODO: Add error handling
+ * TODO: Maybe split this into two functions
  */
 integer request_doorway_setup()
 {
@@ -541,7 +544,7 @@ integer request_doorway_setup()
         string shaft    = llList2String(shafts, shaft_idx);
         string rc_floor = llList2String(shafts, rc_floor_idx);
         
-        // Find the doorways of the shaft's recall floor and get its UUID
+        // Find the doorway of the shaft's recall floor and get its UUID
         integer base_dw_idx = llListFindList(doorways, [rc_floor, shaft]);
         integer base_dw_uuid_idx = base_dw_idx + DOORWAYS_IDX_UUID;
         key base_dw_uuid = llList2Key(doorways, base_dw_uuid_idx);
