@@ -441,14 +441,8 @@ list get_floor_info(string shaft)
 // TODO: this is MASSIVE... both in size as well as in complexity :(
 integer request_doorway_setup()
 {
-    /*
-    string pos = (string)pos.x +","+ (string)pos.y +","+ (string)pos.z;
-    string rot = (string)rot.x +","+ (string)rot.y +","+ (string)rot.z +","+ (string)rot.s;
-     
-    // syntax:  "setup posx,posy,posz rotx,roty,rotz,rots"
-    // example: "16.000000,94.221990,27.550000 0.707107,0.000000,0.000000,0.707107"   
-    */
-
+    integer num_doorways_messaged = 0;
+    
     integer num_shafts = get_strided_length(shafts, shafts_stride);
     integer s;
     
@@ -476,6 +470,7 @@ integer request_doorway_setup()
             string doorway_floor = llList2String(doorways, d * doorways_stride + 0);
             
             // floors:   [float z-pos, string name, ...]
+            integer recall_floor_idx  = llListFindList(floors, [f_recall]) / doorways_stride;
             integer doorway_floor_idx = llListFindList(floors, [doorway_floor]) / doorways_stride;                        
             if (doorway_shaft == shaft)
             {
@@ -486,23 +481,21 @@ integer request_doorway_setup()
                                    (string) base_doorway_rot.y + "," + 
                                    (string) base_doorway_rot.z + "," + 
                                    (string) base_doorway_rot.s + ">";
-                                   
-                // TODO: why are we giving the recall floor via floor NAME
-                //       but the floor the doorway is on via floor INDEX?
+                
                 //
                 //                                   .- pos of reference doorway
                 //                                   |    .- rot of reference doorway
                 //                                   |    |    .- list of all floors
-                //                                   |    |    |       .- recall floor name
-                //                                   |    |    |       |         .- idx of your floor
-                //                                   |    |    |       |         |
-                send_message(doorway_uuid, "setup", [pos, rot, f_info, f_recall, doorway_floor_idx]);
+                //                                   |    |    |       .- recall floor index
+                //                                   |    |    |       |                 .- your floor index
+                //                                   |    |    |       |                 |
+                send_message(doorway_uuid, "setup", [pos, rot, f_info, recall_floor_idx, doorway_floor_idx]);
+                ++num_doorways_messaged;
             }
         }
     }
     
-    // TODO
-    return TRUE;
+    return num_doorways_messaged;
 }
 
 integer request_cab_setup()
