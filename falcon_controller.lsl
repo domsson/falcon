@@ -11,6 +11,7 @@ string SIGNATURE_DOORWAY = "falcon-doorway";
 string SIGNAUTRE_BUTTONS = "falcon-buttons";
 
 integer NOT_FOUND = -1; // ll* functions often return -1 to indicate 'not found'
+integer NOT_HANDLED = -8;
 float   FLOAT_MAX = 3.402823466E+38;
 
 float PAIRING_TIME = 3.0;
@@ -85,7 +86,7 @@ key owner = NULL_KEY;
 
 // state etc
 integer listen_handle;
-string current_state;
+string  current_state;
 
 ////////////////////////////////////////////////////////////////////////////////
 ////  FUNCTIONS                                                             ////
@@ -116,68 +117,15 @@ float round(float val, integer digits)
 list parse_ident(string ident, string sep)
 {
     list tks = llParseString2List(ident, [sep], []);
-    return [llList2String(tks, 0), llList2String(tks, 1), llList2String(tks, 2)];
+    return [llList2String(tks,0), llList2String(tks,1), llList2String(tks,2)];
 }
 
 string get_ident()
 {
-    // This is all this does at the moment, yet. But wait, don't delete this
+    // This is all this does at the moment, yes. But wait, don't delete this
     // function yet! The point is that we might implement some more advanced
     // logic here in the future. Caching the description string, for example.
     return llGetObjectDesc();
-}
-
-process_message(integer chan, string name, key id, string msg)
-{
-    // Split the message on spaces and extract the different parts
-    list    tokens     = llParseString2List(msg, [" "], []);
-    integer num_tokens = llGetListLength(tokens);
-    string  signature  = llList2String(tokens, MSG_IDX_SIG);
-    string  ident      = llList2String(tokens, MSG_IDX_IDENT);
-    string  command    = llList2String(tokens, MSG_IDX_CMD);
-    list    params     = llList2List(tokens,   MSG_IDX_PARAMS, num_tokens - 1);
-    
-    if (command == "pong")
-    {
-        handle_cmd_pong(signature, id, ident, params);
-        return;
-    }
-    
-    if (command == "status")
-    {
-        handle_cmd_status(signature, id, ident, params);
-        return;
-    }
-}
-
-handle_cmd_pong(string sig, key id, string ident, list params)
-{
-    // Currently nothing
-}
-
-handle_cmd_status(string sig, key id, string ident, list params)
-{
-    list ident_tokens = parse_ident(ident, ":");
-    if (sig == "falcon-cab")
-    {
-        add_cab(id, llList2String(ident_tokens, IDENT_IDX_SHAFT));
-        return;
-    }
-    if (sig == "falcon-doorway")
-    {
-        // Get details about the sender
-        list details = llGetObjectDetails(id, [OBJECT_POS]);
-        vector pos = llList2Vector(details, 0);
-        string floor = llList2String(ident_tokens, IDENT_IDX_FLOOR);
-        string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
-        add_doorway(id, pos.z, floor, shaft);
-        return;
-    }
-    if (sig == "falcon-buttons")
-    {
-        add_buttons(id, llList2String(ident_tokens, IDENT_IDX_FLOOR));
-        return;
-    }
 }
 
 /*
@@ -187,7 +135,7 @@ handle_cmd_status(string sig, key id, string ident, list params)
 send_message(key id, string cmd, list params)
 {
     list msg = [SIGNATURE, get_ident(),
-                cmd,  llDumpList2String(params, " ")];
+                cmd, llDumpList2String(params, " ")];
     llRegionSayTo(id, CHANNEL, llDumpList2String(msg, " "));
 }
 
@@ -198,8 +146,86 @@ send_message(key id, string cmd, list params)
 send_broadcast(string cmd, list params)
 {
     list msg = [SIGNATURE, get_ident(),
-                cmd,  llDumpList2String(params, " ")];
+                cmd, llDumpList2String(params, " ")];
     llRegionSay(CHANNEL, llDumpList2String(msg, " "));
+}
+
+/*
+ * Handles the incoming message. Returns a numeric value, where TRUE and other 
+ * positive values are generally a sign of success. NOT_HANDLED indicates that 
+ * no handler for this command is known or the handler didn't know what to do 
+ * with the message. FALSE or other negative values indicate failure.
+ */
+integer process_message(integer chan, string name, key id, string msg)
+{
+    // Split the message on spaces
+    list    tokens     = llParseString2List(msg, [" "], []);
+    integer num_tokens = llGetListLength(tokens);
+    
+    // Extract the different components
+    string sig    = llList2String(tokens, MSG_IDX_SIG);
+    string ident  = llList2String(tokens, MSG_IDX_IDENT);
+    string cmd    = llList2String(tokens, MSG_IDX_CMD);
+    list   params = llList2List(tokens,   MSG_IDX_PARAMS, num_tokens - 1);
+    
+    // Hand over to the appropriate command handler
+    if (cmd == "pong")
+    {
+        return handle_cmd_pong(id, sig, ident, params);
+    }
+    if (cmd == "status")
+    {
+        return handle_cmd_status(id, sig, ident, params);
+    }
+    
+    // Message has not been handled
+    return NOT_HANDLED;
+}
+
+integer handle_cmd_pong(key id, string sig, string ident, list params)
+{
+    // Currently nothing
+    return NOT_HANDLED;
+}
+
+integer handle_cmd_status(key id, string sig, string ident, list params)
+{
+    // Parse the object's ident string into a list
+    list ident_tokens = parse_ident(ident, ":");
+    
+    // Handle based on type of object
+    if (sig == "falcon-cab")
+    {
+        // Add the cab to our list
+        string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
+        add_shaft(shaft);
+        return add_cab(id, shaft);
+    }
+    if (sig == "falcon-doorway")
+    {
+        // Query doorway object's details to get its z-position
+        list details = llGetObjectDetails(id, [OBJECT_POS]);
+        vector pos   = llList2Vector(details, 0);
+        float zpos   = round(pos.z, 2);
+        
+        // Parse floor and shaft name from doorway's ident string
+        string floor = llList2String(ident_tokens, IDENT_IDX_FLOOR);
+        string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
+        
+        // Add the doorway to our list
+        integer success = TRUE;
+        add_floor(zpos, floor);
+        return add_doorway(id, floor, shaft);
+    }
+    if (sig == "falcon-buttons")
+    {
+        // Add the call buttons to our list
+        string floor = llList2String(ident_tokens, IDENT_IDX_FLOOR);
+        return add_buttons(id, floor);
+    }
+    
+    // Message has not been handled after all
+    return NOT_HANDLED;
 }
 
 /*
@@ -211,42 +237,54 @@ integer get_strided_length(list l, integer s)
 }
 
 /*
- * Adds the elevator cab with UUID `uuid` and shaft name `shaft` 
- * to the list of cabs, unless `id` is already in the list.
+ * Adds the shaft with name `shaft` to the list of shafts.
+ * Returns TRUE on success, FALSE if the shaft was already in the list.
  */
-integer add_cab(key uuid, string shaft)
+integer add_shaft(string shaft)
 {
-    // Abort if the cab with this UUID has already been added
-    if (llListFindList(cabs, (list) uuid) != NOT_FOUND)
-    {
-        return FALSE;
-    }
-    
-    // Abort if a cab for this shaft has already been added
-    if (llListFindList(cabs, (list) shaft) != NOT_FOUND)
-    {
-        return FALSE;
-    }
-    
-    // Add the cab
-    cabs += [shaft, uuid];
-
     // Abort if the given shaft has already been added
-    if (llListFindList(shafts, (list) shaft) != NOT_FOUND)
+    if (llListFindList(shafts, [shaft]) != NOT_FOUND)
     {
         return FALSE;
     }
     
     // Add the shaft
     shafts += [shaft, 0.0, ""];
-    
     return TRUE;
 }
 
+/*
+ * Adds the elevator cab with UUID `uuid` to the list of cabs.
+ * Returns TRUE on success, FALSE if the cab was already in the list.
+ */
+integer add_cab(key uuid, string shaft)
+{
+    // Abort if the cab with this UUID has already been added
+    if (llListFindList(cabs, [uuid]) != NOT_FOUND)
+    {
+        return FALSE;
+    }
+    
+    // Abort if a cab for this shaft has already been added
+    if (llListFindList(cabs, [shaft]) != NOT_FOUND)
+    {
+        return FALSE;
+    }
+    
+    // Add the cab
+    cabs += [shaft, uuid];
+    return TRUE;
+}
+
+/*
+ * Adds the floor with the z-position `zpos` and the name `name` to the list of 
+ * floors. Returns TRUE on success, FALSE if the floor was already in the list 
+ * or -1 on error. An error occurs when the list already has one or two floors  * that each have either the given z-position OR name, but not both (mismatch).
+ */
 integer add_floor(float zpos, string name)
 {
-    integer zpos_idx = llListFindList(floors, (list) zpos);
-    integer name_idx = llListFindList(floors, (list) name);
+    integer zpos_idx = llListFindList(floors, [zpos]);
+    integer name_idx = llListFindList(floors, [name]);
     
     // both found and match:       1
     // neither found:              0
@@ -263,30 +301,40 @@ integer add_floor(float zpos, string name)
     // Floor already in list (not an error)
     if (idx_match == 1)
     {
-        return TRUE;
+        return FALSE;
     }
     
     // Either only zpos or name was found in the list, or both were found but 
     // didn't match, meaning they are already associated with a different zpos 
     // or floor number accordingly; either way: we have a mismatch (error)
-    return FALSE;
+    return -1;
 }
 
-integer add_doorway(key uuid, float z, string floor, string shaft)
+/*
+ * Adds the doorway with UUID `uuid` to the list of doorways.
+ * Returns TRUE on success, FALSE if the doorway was already in the list.
+ */
+integer add_doorway(key uuid, string floor, string shaft)
 {
-    float z_rounded = round(z, 2);
-    if (add_floor(z_rounded, floor) == FALSE)
+    // Abort if this doorway is already in the list of doorways
+    if (llListFindList(doorways, [uuid]) != NOT_FOUND)
     {
         return FALSE;
     }
+    
+    // Add the doorway
     doorways += [floor, shaft, uuid];
     return TRUE;
 }
 
+/*
+ * Adds the call buttons with UUID `uuid` to the list of call buttons.
+ * Returns TRUE on success, FALSE if these buttons were already in the list.
+ */
 integer add_buttons(key uuid, string floor)
 {
     // Buttons with that UUID have already been added
-    if (llListFindList(buttons, (list) uuid) != NOT_FOUND)
+    if (llListFindList(buttons, [uuid]) != NOT_FOUND)
     {
         return FALSE;
     }
