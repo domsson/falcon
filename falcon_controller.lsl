@@ -358,7 +358,6 @@ integer set_recall_floor(string shaft, string floor)
 
 init_recall_floors()
 {
-    /*
     integer num_cabs = get_strided_length(cabs, cabs_stride);
     integer i;
     
@@ -366,32 +365,6 @@ init_recall_floors()
     {
         key    cab_uuid  = llList2Key(cabs,    i * cabs_stride + 1);
         string cab_shaft = llList2String(cabs, i * cabs_stride + 0);
-        
-        list   details  = llGetObjectDetails(cab_uuid, ([OBJECT_POS]));
-        vector pos      = llList2Vector(details, 0);
-        
-        integer doorway_index = get_closest_doorway(pos.z, cab_shaft);
-        
-        // Add the recall_floor index to the shafts lists
-        // doorways: [string floor, string shaft, key uuid, ...]
-        string floor = llList2String(doorways, doorway_index * doorways_stride + 0);
-        set_recall_floor(cab_shaft, floor);
-        
-        debug("Closest doorway for " + cab_shaft + ": " + (string) doorway_index);
-    }
-    */
-    integer num_shafts = get_strided_length(shafts, shafts_stride);
-    integer i;
-    
-    for (i = 0; i < num_shafts; ++i)
-    {
-        // shafts: [string name, float doorway_offset, integer recall_floor...]
-        string cab_shaft = llList2String(shafts, i * shafts_stride + 0);
-        // cabs: [string shaft, key uuid, ...]
-        key   cab_uuid = llList2Key(cabs, llListFindList(cabs, [cab_shaft]) + 1);
-        
-        //key    cab_uuid  = llList2Key(cabs,    i * cabs_stride + 1);
-        //string cab_shaft = llList2String(cabs, i * cabs_stride + 0);
         
         list   details  = llGetObjectDetails(cab_uuid, ([OBJECT_POS]));
         vector pos      = llList2Vector(details, 0);
