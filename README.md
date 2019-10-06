@@ -126,47 +126,49 @@ out there; one for each of these cases. For now, one will have to do.
     The `controller` reads its configuration notecard and parses all 
     relevant information; amongst that information can optionally be a 
     list of floor numbers/names (one to two digits)
+8.  **Find base doorway**  
+    The `controller` queries the location and rotation of the _base_ 
+    `doorway` (the one closests in z-position to the associated `cab`);
+    this will also determine the recall floor for the `shaft` of that 
+    `doorway`, as well as the z-offset between `cab` and `doorway`s
 
 #### Setup
     
-1.  **Find base doorway**  
-    The `controller` queries the location and rotation of the _base_ 
-    `doorway` (the one closests in z-position to the associated `cab`)
-2.  **Request doorway setup**  
+1.  **Request doorway setup**  
     The `controller` sends a message to all `doorway`s, instructing them 
     to perform setup; this message includes the x- and y-position and 
     rotation as queried from the _base_ doorway, as well as their custom 
     floor number/name, if any; additionally, it includes a list of all 
     `floor`s and their accessibility (this is important so that the 
     `doorway`s can setup linked `call_buttons` correctly, if any)
-3.  **Peform doorway setup**  
+2.  **Peform doorway setup**  
     All `doorway`s undergo setup and report failure or success back to 
     the `controller`
-4.  **Request cab setup**  
+3.  **Request cab setup**  
     The `controller` sends a message to all `cab`s, instructing them to 
     perform setup; this message includes a list of all `floor`s, 
     including their z-position, as well as their custom floor names, 
     if any, and whether each `floor` is actually accessible by that 
     particular `cab` (some floors might not be accessible by all the 
     `cab`s in a `bank`)
-5.  **Perform cab setup**  
+4.  **Perform cab setup**  
     All `cab`s perform setup, including setting up their subcomponents; 
     the `cab`s then send a message back to the `controller`, 
     specifying if setup was successfull or failed
-6.  **Request button setup**  
+5.  **Request button setup**  
     The `controller` sends a message to all `call_buttons` (if any), 
     instructing them to perform setup; the message contains a list of 
     all `floor`s and their accessibility (this is important so that the 
     buttons can be set up correctly, i.e. show only an up-arrow button 
     if there are no floors below etc)
-7.  **Perform button setup**  
+6.  **Perform button setup**  
     All `call_buttons`, if any, perform setup and report back to the 
     `controller` accordingly
-8.  **Inform about success**  
+7.  **Inform about success**  
     If all components were setup successfully, the `controller` sends 
     out messages to all registered components, informing them that the 
     system is ready
-9.  **Finish up**  
+8.  **Finish up** _optional_   
     All components may now peform additional steps to get into their 
     individual idle/ready states; for example, all `cab`s and `doorway`s 
     might want to close their doors, if any, etc
