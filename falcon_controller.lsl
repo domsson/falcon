@@ -379,8 +379,6 @@ integer init_recall_floors()
         {
             success = FALSE;
         }
-        
-        //debug("Closest doorway for " + cab_shaft + ": " + (string) doorway_index);
     }
     return success;
 }
@@ -405,14 +403,6 @@ integer get_strided_index_by_member(list l, integer s, integer o, string m)
         }
     }
     return NOT_FOUND;
-}
-
-
-
-list get_doorway_details(integer index)
-{
-    key uuid = llList2Key(doorways, index * doorways_stride + 2);
-    return llGetObjectDetails(uuid, [OBJECT_POS, OBJECT_ROT]);   
 }
 
 integer get_recall_floor(string shaft)
@@ -476,7 +466,10 @@ integer request_doorway_setup()
     {
         string shaft = llList2String(shafts, s * shafts_stride + 0);
         integer base_doorway_idx = llList2Integer(shafts, s * shafts_stride + 2);
-        list base_doorway_details = get_doorway_details(base_doorway_idx);
+
+        key uuid = llList2Key(doorways, base_doorway_idx * doorways_stride + 2);
+        list base_doorway_details = llGetObjectDetails(uuid, [OBJECT_POS, OBJECT_ROT]);
+
         vector base_doorway_pos = llList2Vector(base_doorway_details, 0);
         rotation base_doorway_rot = llList2Rot(base_doorway_details, 1);
         string f_info = llDumpList2String(get_floor_info(shaft), ",");
