@@ -157,13 +157,10 @@ handle_cmd_pong(string sig, key id, string ident, list params)
 
 handle_cmd_status(string sig, key id, string ident, list params)
 {
+    list ident_tokens = parse_ident(ident, ":");
     if (sig == "falcon-cab")
     {
-        list ident_tokens = parse_ident(ident, ":");
-        if (add_cab(id, llList2String(ident_tokens, IDENT_IDX_SHAFT)) == FALSE)
-        {
-            debug("Could not add cab: " + ident);
-        }
+        add_cab(id, llList2String(ident_tokens, IDENT_IDX_SHAFT));
         return;
     }
     if (sig == "falcon-doorway")
@@ -171,19 +168,13 @@ handle_cmd_status(string sig, key id, string ident, list params)
         // Get details about the sender
         list details = llGetObjectDetails(id, [OBJECT_POS]);
         vector pos = llList2Vector(details, 0);
-        float z = pos.z;
-        list ident_tokens = parse_ident(ident, ":");
         string floor = llList2String(ident_tokens, IDENT_IDX_FLOOR);
         string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
-        if (add_doorway(id, z, floor, shaft) == FALSE)
-        {
-            debug("Could not add doorway: " + ident);
-        }
+        add_doorway(id, pos.z, floor, shaft);
         return;
     }
     if (sig == "falcon-buttons")
     {
-        list ident_tokens = parse_ident(ident, ":");
         add_buttons(id, llList2String(ident_tokens, IDENT_IDX_FLOOR));
         return;
     }
