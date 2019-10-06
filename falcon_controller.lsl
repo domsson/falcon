@@ -28,7 +28,7 @@ integer IDENT_IDX_FLOOR = 2;
 // List of all `cab` objects operating in this bank
 // [string shaft, key uuid, ...]
 list    cabs;
-integer cabs_stride = 2;
+integer CABS_STRIDE = 2;
 
 integer CABS_IDX_SHAFT = 0;
 integer CABS_IDX_UUID  = 1;
@@ -36,7 +36,7 @@ integer CABS_IDX_UUID  = 1;
 // List of all `doorway` objects for this bank
 // [string floor, string shaft, key uuid, ...]
 list    doorways;
-integer doorways_stride = 3;
+integer DOORWAYS_STRIDE = 3;
 
 integer DOORWAYS_IDX_FLOOR = 0;
 integer DOORWAYS_IDX_SHAFT = 1;
@@ -45,7 +45,7 @@ integer DOORWAYS_IDX_UUID  = 2;
 // List of all `call_buttons` objects for this bank
 // [string floor, key uuid, ...]
 list    buttons;
-integer buttons_stride = 2;
+integer BUTTONS_STRIDE = 2;
 
 integer BUTTONS_IDX_FLOOR = 0;
 integer BUTTONS_IDX_UUID  = 0;
@@ -53,7 +53,7 @@ integer BUTTONS_IDX_UUID  = 0;
 // List of all elevator shafts in this bank
 // [string name, float doorway_offset, string recall_floor...]
 list    shafts;
-integer shafts_stride = 3;
+integer SHAFTS_STRIDE = 3;
 
 integer SHAFTS_IDX_NAME          = 0;
 integer SHAFTS_IDX_DOORWAY_DIST  = 1;
@@ -63,7 +63,7 @@ integer SHAFTS_IDX_RECALL_FLOOR  = 2;
 // Order important: lowest floor (zpos) first!
 // [float zpos, string name, ...]
 list    floors;
-integer floors_stride = 2;
+integer FLOORS_STRIDE = 2;
 
 integer FLOORS_IDX_ZPOS = 0;
 integer FLOORS_IDX_NAME = 1;
@@ -114,27 +114,28 @@ string get_ident()
 
 process_message(integer chan, string name, key id, string msg)
 {
-    // Split the message on spaces and extract the first two tokens
+    // Split the message on spaces and extract the different parts
     list    tokens     = llParseString2List(msg, [" "], []);
     integer num_tokens = llGetListLength(tokens);
     string  signature  = llList2String(tokens, MSG_IDX_SIG);
     string  ident      = llList2String(tokens, MSG_IDX_IDENT);
     string  command    = llList2String(tokens, MSG_IDX_CMD);
-    list    params     = llList2List(tokens, MSG_IDX_PARAMS, num_tokens - 1);
+    list    params     = llList2List(tokens,   MSG_IDX_PARAMS, num_tokens - 1);
     
     if (command == "pong")
     {
-        handle_cmd_pong(signature, id, ident);
+        handle_cmd_pong(signature, id, ident, params);
         return;
     }
     
     if (command == "status")
     {
         handle_cmd_status(signature, id, ident, params);
+        return;
     }
 }
 
-handle_cmd_pong(string sig, key id, string ident)
+handle_cmd_pong(string sig, key id, string ident, list params)
 {
     // Currently nothing
 }
@@ -179,7 +180,6 @@ handle_cmd_status(string sig, key id, string ident, list params)
  */ 
 send_message(key id, string cmd, list params)
 {
-    //list msg = [SIGNATURE, llDumpList2String(get_identifiers(), ":"),
     list msg = [SIGNATURE, get_ident(),
                 cmd,  llDumpList2String(params, " ")];
     llRegionSayTo(id, CHANNEL, llDumpList2String(msg, " "));
@@ -191,7 +191,6 @@ send_message(key id, string cmd, list params)
  */
 send_broadcast(string cmd, list params)
 {
-    //list msg = [SIGNATURE, llDumpList2String(get_identifiers(), ":"),
     list msg = [SIGNATURE, get_ident(),
                 cmd,  llDumpList2String(params, " ")];
     llRegionSay(CHANNEL, llDumpList2String(msg, " "));
@@ -299,6 +298,7 @@ integer add_buttons(key uuid, string floor)
 float get_doorway_zpos(string floor)
 {
     // floors: [float z-pos, string name, ...]
+    // TODO: use index constants and math instead of -1
     return llList2Float(floors, llListFindList(floors, [floor]) - 1);
 }
 
@@ -313,15 +313,15 @@ list get_closest_doorway(string shaft, float zpos)
     
     // doorways: [string floor, string shaft, key uuid, ...]
     
-    integer num_doorways = get_strided_length(doorways, doorways_stride);
+    integer num_doorways = get_strided_length(doorways, DOORWAYS_STRIDE);
     integer i;
     
     for (i = 0; i < num_doorways; ++i)
     {
-        string doorway_shaft = llList2String(doorways, i * doorways_stride + 1);
+        string doorway_shaft = llList2String(doorways, i * DOORWAYS_STRIDE + DOORWAYS_IDX_SHAFT);
         if (shaft == doorway_shaft)
         {
-            string doorway_floor = llList2String(doorways, i * doorways_stride + 0);
+            string doorway_floor = llList2String(doorways, i * DOORWAYS_STRIDE + DOORWAYS_IDX_FLOOR);
             float  doorway_zpos  = get_doorway_zpos(doorway_floor);
             float  distance = llFabs(doorway_zpos - zpos);
         
@@ -337,9 +337,6 @@ list get_closest_doorway(string shaft, float zpos)
 
 integer set_shaft_details(string shaft, float doorway_offset, string recall_floor)
 {
-    // shafts: [string name, float doorway_offset, string recall_floor...]
-    // floors: [float z-pos, string name, ...] 
-    
     // Check if the given floor exists in the `floors` list
     integer floor_index = llListFindList(floors, [recall_floor]);
     if (floor_index == NOT_FOUND)
@@ -354,6 +351,7 @@ integer set_shaft_details(string shaft, float doorway_offset, string recall_floo
         return FALSE;
     }
     
+    // shafts: [string name, float doorway_offset, string recall_floor...]
     shafts = llListReplaceList(shafts, [doorway_offset, recall_floor], shaft_index + 1, shaft_index + 2);
     return TRUE;
 }
@@ -362,7 +360,7 @@ integer set_shaft_details(string shaft, float doorway_offset, string recall_floo
 integer init_recall_floors()
 {
     integer success = TRUE;
-    integer num_cabs = get_strided_length(cabs, cabs_stride);
+    integer num_cabs = get_strided_length(cabs, CABS_STRIDE);
     integer i;
     
     for (i = 0; i < num_cabs; ++i)
@@ -370,16 +368,16 @@ integer init_recall_floors()
         // doorways: [string floor, string shaft, key uuid, ...]
         // cabs:     [string shaft, key uuid, ...]
         
-        key    cab_uuid  = llList2Key(cabs,    i * cabs_stride + 1);
-        string cab_shaft = llList2String(cabs, i * cabs_stride + 0);
+        key    cab_uuid  = llList2Key(cabs,    i * CABS_STRIDE + CABS_IDX_UUID);
+        string cab_shaft = llList2String(cabs, i * CABS_STRIDE + CABS_IDX_SHAFT);
         
-        list   details  = llGetObjectDetails(cab_uuid, ([OBJECT_POS]));
-        vector pos      = llList2Vector(details, 0);
+        list   details = llGetObjectDetails(cab_uuid, [OBJECT_POS]);
+        vector pos     = llList2Vector(details, 0);
         
         list closest_doorway = get_closest_doorway(cab_shaft, pos.z);
         integer doorway_index  = llList2Integer(closest_doorway, 0);
         float   doorway_offset = llList2Float(closest_doorway, 1);
-        string  doorway_floor  = llList2String(doorways, doorway_index * doorways_stride + 0);
+        string  doorway_floor  = llList2String(doorways, doorway_index * DOORWAYS_STRIDE + DOORWAYS_IDX_FLOOR);
         
         if (set_shaft_details(cab_shaft, doorway_offset, doorway_floor) == FALSE)
         {
@@ -393,7 +391,7 @@ string get_recall_floor(string shaft)
 {
     integer idx = llListFindList(shafts, [shaft]);
     // shafts: [string name, float doorway_offset, string recall_floor...]
-    return llList2String(shafts, idx + 2);
+    return llList2String(shafts, idx + SHAFTS_IDX_RECALL_FLOOR);
 }
 
 /*
@@ -406,15 +404,15 @@ list get_floor_info(string shaft)
 {
     list floor_info = [];
     
-    integer num_floors = get_strided_length(floors, floors_stride);
+    integer num_floors = get_strided_length(floors, FLOORS_STRIDE);
     integer f;
 
     for (f = 0; f < num_floors; ++f)
     {
         // doorways: [string floor, string shaft, key uuid, ...]
         // floors:   [float z-pos, string name, ...]        
-        float  f_zpos  = llList2Float(floors,  f * floors_stride + 0);
-        string f_name  = llList2String(floors, f * floors_stride + 1);
+        float  f_zpos  = llList2Float(floors,  f * FLOORS_STRIDE + FLOORS_IDX_ZPOS);
+        string f_name  = llList2String(floors, f * FLOORS_STRIDE + FLOORS_IDX_NAME);
         
         // Check if there is a doorway for this floor and shaft
         integer access = llListFindList(doorways, [f_name, shaft]) != NOT_FOUND;
@@ -430,10 +428,10 @@ integer request_doorway_setup()
 {
     integer num_doorways_messaged = 0;
     
-    integer num_shafts = get_strided_length(shafts, shafts_stride);
+    integer num_shafts = get_strided_length(shafts, SHAFTS_STRIDE);
     integer s;
     
-    integer num_doorways = get_strided_length(doorways, doorways_stride);
+    integer num_doorways = get_strided_length(doorways, DOORWAYS_STRIDE);
     integer d;
     
     for (s = 0; s < num_shafts; ++s)
@@ -441,16 +439,17 @@ integer request_doorway_setup()
         // shafts:   [string name, float doorway_offset, string recall_floor...]
         // doorways: [string floor, string shaft, key uuid, ...]
         
-        string shaft = llList2String(shafts, s * shafts_stride + 0);
-        string recall_floor = llList2String(shafts, s * shafts_stride + 2);
+        string shaft = llList2String(shafts, s * SHAFTS_STRIDE + SHAFTS_IDX_NAME);
+        string recall_floor = llList2String(shafts, s * SHAFTS_STRIDE + SHAFTS_IDX_RECALL_FLOOR);
         integer base_doorway_idx = llListFindList(doorways, [recall_floor, shaft]);
         // TODO: what if the above line yields NOT_FOUND?
-        key base_doorway_uuid = llList2Key(doorways, base_doorway_idx + 2);
+        key base_doorway_uuid = llList2Key(doorways, base_doorway_idx + DOORWAYS_IDX_UUID);
+        
         list base_doorway_details = llGetObjectDetails(base_doorway_uuid, [OBJECT_POS, OBJECT_ROT]);
-
-        vector base_doorway_pos = llList2Vector(base_doorway_details, 0);
+        vector   base_doorway_pos = llList2Vector(base_doorway_details, 0);
         rotation base_doorway_rot = llList2Rot(base_doorway_details, 1);
-        string f_info = llDumpList2String(get_floor_info(shaft), ",");
+        
+        string f_info   = llDumpList2String(get_floor_info(shaft), ",");
         string f_recall = get_recall_floor(shaft);
         
         for (d = 0; d < num_doorways; ++d)
@@ -458,15 +457,15 @@ integer request_doorway_setup()
             // doorways: [string floor, string shaft, key uuid, ...]
             // floors:   [float z-pos, string name, ...]
             
-            string doorway_shaft = llList2String(doorways, d * doorways_stride + 1);
+            string doorway_shaft = llList2String(doorways, d * DOORWAYS_STRIDE + DOORWAYS_IDX_SHAFT);
                        
             if (doorway_shaft == shaft)
             {
-                key    doorway_uuid  = llList2Key(doorways, d * doorways_stride + 2);
-                string doorway_floor = llList2String(doorways, d * doorways_stride + 0);
+                key    doorway_uuid  = llList2Key(doorways, d * DOORWAYS_STRIDE + DOORWAYS_IDX_UUID);
+                string doorway_floor = llList2String(doorways, d * DOORWAYS_STRIDE + DOORWAYS_IDX_FLOOR);
                 
-                integer recall_floor_idx  = llListFindList(floors, [f_recall]) / doorways_stride;
-                integer doorway_floor_idx = llListFindList(floors, [doorway_floor]) / doorways_stride; 
+                integer recall_floor_idx  = llListFindList(floors, [f_recall]) / DOORWAYS_STRIDE;
+                integer doorway_floor_idx = llListFindList(floors, [doorway_floor]) / DOORWAYS_STRIDE; 
             
                 string pos = "<" + (string) base_doorway_pos.x + "," +
                                    (string) base_doorway_pos.y + "," + 
@@ -506,7 +505,7 @@ integer all_components_setup()
 
 sort_components()
 {
-    floors = llListSort(floors, floors_stride, TRUE);
+    floors = llListSort(floors, FLOORS_STRIDE, TRUE);
 }
 
 integer init()
@@ -565,9 +564,9 @@ state pairing
     {        
         llSetTimerEvent(0.0);
         /*
-        llOwnerSay("Cabs: "     + (string) get_strided_length(cabs, cabs_stride));
-        llOwnerSay("Doorways: " + (string) get_strided_length(doorways, doorways_stride));
-        llOwnerSay("Buttons: "  + (string) get_strided_length(buttons, buttons_stride));
+        llOwnerSay("Cabs: "     + (string) get_strided_length(cabs, CABS_STRIDE));
+        llOwnerSay("Doorways: " + (string) get_strided_length(doorways, DOORWAYS_STRIDE));
+        llOwnerSay("Buttons: "  + (string) get_strided_length(buttons, BUTTONS_STRIDE));
         */
         
         sort_components();
