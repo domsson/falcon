@@ -117,12 +117,12 @@ out there; one for each of these cases. For now, one will have to do.
 5.  **Remember components**  
     The `controller` creates and maintains a list of all components that 
     reported back
-6.  **Sanity check** _optional_
+6.  **Sanity check** _optional_  
     The `controller` checks if all required components are in place; 
     that is, at least one `cab` and at least two `doorway` objects for 
     each `cab`; `call_buttons` are seen as optional as they might be 
     implemented as a subcomponent of the `doorway` objects
-7.  **Read config**  _optional_
+7.  **Read config**  _optional_  
     The `controller` reads its configuration notecard and parses all 
     relevant information; amongst that information can optionally be a 
     list of floor numbers/names (one to two digits)
