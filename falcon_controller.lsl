@@ -30,26 +30,43 @@ integer IDENT_IDX_FLOOR = 2;
 list    cabs;
 integer cabs_stride = 2;
 
+integer CABS_IDX_SHAFT = 0;
+integer CABS_IDX_UUID  = 1;
+
 // List of all `doorway` objects for this bank
 // [string floor, string shaft, key uuid, ...]
 list    doorways;
 integer doorways_stride = 3;
+
+integer DOORWAYS_IDX_FLOOR = 0;
+integer DOORWAYS_IDX_SHAFT = 1;
+integer DOORWAYS_IDX_UUID  = 2;
 
 // List of all `call_buttons` objects for this bank
 // [string floor, key uuid, ...]
 list    buttons;
 integer buttons_stride = 2;
 
+integer BUTTONS_IDX_FLOOR = 0;
+integer BUTTONS_IDX_UUID  = 0;
+
 // List of all elevator shafts in this bank
 // [string name, float doorway_offset, string recall_floor...]
 list    shafts;
 integer shafts_stride = 3;
+
+integer SHAFTS_IDX_NAME          = 0;
+integer SHAFTS_IDX_DOORWAY_DIST  = 1;
+integer SHAFTS_IDX_RECALL_FLOOR  = 2;
 
 // List of all floors
 // Order important: lowest floor (zpos) first!
 // [float zpos, string name, ...]
 list    floors;
 integer floors_stride = 2;
+
+integer FLOORS_IDX_ZPOS = 0;
+integer FLOORS_IDX_NAME = 1;
 
 // important objects/ids
 key uuid  = NULL_KEY;
@@ -97,19 +114,6 @@ string get_ident()
 
 process_message(integer chan, string name, key id, string msg)
 {
-    // Debug print the received message
-    //debug(" < `" + msg + "`");
-    
-    // Get details about the sender
-    list details = llGetObjectDetails(id, ([OBJECT_NAME, OBJECT_DESC, 
-                                            OBJECT_POS, OBJECT_ROT, OBJECT_OWNER]));
-   
-    // Abort if the message came from someone else's object
-    if (owner != llList2Key(details, 4))
-    {
-        return;
-    }
-
     // Split the message on spaces and extract the first two tokens
     list    tokens     = llParseString2List(msg, [" "], []);
     integer num_tokens = llGetListLength(tokens);
@@ -126,7 +130,7 @@ process_message(integer chan, string name, key id, string msg)
     
     if (command == "status")
     {
-        handle_cmd_status(signature, id, ident, params, details);
+        handle_cmd_status(signature, id, ident, params);
     }
 }
 
@@ -135,11 +139,10 @@ handle_cmd_pong(string sig, key id, string ident)
     // Currently nothing
 }
 
-handle_cmd_status(string sig, key id, string ident, list params, list details)
+handle_cmd_status(string sig, key id, string ident, list params)
 {
     if (sig == "falcon-cab")
     {
-        //cabs = add_component(cabs, id, ident);
         list ident_tokens = parse_ident(ident, ":");
         if (add_cab(id, llList2String(ident_tokens, IDENT_IDX_SHAFT)) == FALSE)
         {
@@ -149,8 +152,9 @@ handle_cmd_status(string sig, key id, string ident, list params, list details)
     }
     if (sig == "falcon-doorway")
     {
-        //doorways = add_component(doorways, id, ident);
-        vector pos = llList2Vector(details, 2);
+        // Get details about the sender
+        list details = llGetObjectDetails(id, [OBJECT_POS]);
+        vector pos = llList2Vector(details, 0);
         float z = pos.z;
         list ident_tokens = parse_ident(ident, ":");
         string floor = llList2String(ident_tokens, IDENT_IDX_FLOOR);
@@ -163,7 +167,6 @@ handle_cmd_status(string sig, key id, string ident, list params, list details)
     }
     if (sig == "falcon-buttons")
     {
-        //buttons = add_component(buttons, id, ident);
         list ident_tokens = parse_ident(ident, ":");
         add_buttons(id, llList2String(ident_tokens, IDENT_IDX_FLOOR));
         return;
