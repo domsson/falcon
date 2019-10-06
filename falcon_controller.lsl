@@ -356,8 +356,9 @@ integer set_recall_floor(string shaft, string floor)
     return TRUE;
 }
 
-init_recall_floors()
+integer init_recall_floors()
 {
+    integer success = TRUE;
     integer num_cabs = get_strided_length(cabs, cabs_stride);
     integer i;
     
@@ -374,10 +375,14 @@ init_recall_floors()
         // Add the recall_floor index to the shafts lists
         // doorways: [string floor, string shaft, key uuid, ...]
         string floor = llList2String(doorways, doorway_index * doorways_stride + 0);
-        set_recall_floor(cab_shaft, floor);
+        if (set_recall_floor(cab_shaft, floor) == FALSE)
+        {
+            success = FALSE;
+        }
         
-        debug("Closest doorway for " + cab_shaft + ": " + (string) doorway_index);
+        //debug("Closest doorway for " + cab_shaft + ": " + (string) doorway_index);
     }
+    return success;
 }
 
 /*
