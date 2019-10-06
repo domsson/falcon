@@ -31,9 +31,9 @@ list    cabs;
 integer cabs_stride = 2;
 
 // list of all `doorway` object
-// [float z-pos, string floor, string shaft, key uuid, ...]
+// [string floor, string shaft, key uuid, ...]
 list    doorways;
-integer doorways_stride = 4;
+integer doorways_stride = 3;
 
 // list of all `call_buttons` objects
 // [string floor, key uuid, ...]
@@ -277,7 +277,7 @@ integer add_doorway(key uuid, float z, string floor, string shaft)
     {
         return FALSE;
     }
-    doorways += [z_rounded, floor, shaft, uuid];
+    doorways += [floor, shaft, uuid];
     return TRUE;
 }
 
@@ -297,6 +297,12 @@ integer add_buttons(key uuid, string floor)
     return TRUE;
 }
 
+float get_doorway_zpos(string floor)
+{
+    // floors: [float z-pos, string name, ...]
+    return llList2Float(floors, llListFindList(floors, [floor]) - 1);
+}
+
 /*
  * Returns the index of the given shaft's doorway that is closest to the given
  * z-position or NOT_FOUND if we don't know of any doorways for that shaft yet.
@@ -307,17 +313,18 @@ integer get_closest_doorway(float zpos, string shaft)
     float   closest_distance = FLOAT_MAX;
     
     // doorways list:
-    //         0             1             2          3
-    // [float z-pos, string floor, string shaft, key uuid, ...]
+    //          0             1          2
+    // [string floor, string shaft, key uuid, ...]
     
     integer i;
     integer num_doorways = get_strided_length(doorways, doorways_stride);
     for (i = 0; i < num_doorways; ++i)
     {
-        string doorway_shaft = llList2String(doorways, i * doorways_stride + 2);
+        string doorway_shaft = llList2String(doorways, i * doorways_stride + 1);
         if (shaft == doorway_shaft)
         {
-            float doorway_zpos = llList2Float(doorways, i * doorways_stride + 0);
+            string doorway_floor = llList2String(doorways, i * doorways_stride + 0);
+            float doorway_zpos = get_doorway_zpos(doorway_floor);
             float distance = llFabs(doorway_zpos - zpos);
         
             if (distance < closest_distance)
@@ -347,8 +354,8 @@ find_closest_doorways()
         integer doorway_index = get_closest_doorway(pos.z, cab_shaft);
         
         // Add the recall_floor index to the shafts lists
-        // doorways: [float z-pos, string floor, string shaft, key uuid, ...]
-        string floor = llList2String(doorways, doorway_index * doorways_stride + 1);
+        // doorways: [string floor, string shaft, key uuid, ...]
+        string floor = llList2String(doorways, doorway_index * doorways_stride + 0);
         set_recall_floor(cab_shaft, floor);
         
         debug("Closest doorway for " + cab_shaft + ": " + (string) doorway_index);
@@ -401,7 +408,7 @@ integer set_recall_floor(string shaft, string floor)
 
 list get_doorway_details(integer index)
 {
-    key uuid = llList2Key(doorways, index * doorways_stride + 3);
+    key uuid = llList2Key(doorways, index * doorways_stride + 2);
     return llGetObjectDetails(uuid, [OBJECT_POS, OBJECT_ROT]);   
 }
 
@@ -474,13 +481,13 @@ integer request_doorway_setup()
         
         for (d = 0; d < num_doorways; ++d)
         {
-            // doorways: [float z-pos, string floor, string shaft, key uuid]
-            key doorway_uuid = llList2Key(doorways, d * doorways_stride + 3);
-            string doorway_shaft = llList2String(doorways, d * doorways_stride + 2);
-            string doorway_floor = llList2String(doorways, d * doorways_stride + 1);
+            // doorways: [string floor, string shaft, key uuid]
+            key doorway_uuid = llList2Key(doorways, d * doorways_stride + 2);
+            string doorway_shaft = llList2String(doorways, d * doorways_stride + 1);
+            string doorway_floor = llList2String(doorways, d * doorways_stride + 0);
             
             // floors:   [float z-pos, string name, ...]
-            integer doorway_floor_idx = (llListFindList(floors, [doorway_floor]) - 1) / doorways_stride;                        
+            integer doorway_floor_idx = llListFindList(floors, [doorway_floor]) / doorways_stride;                        
             if (doorway_shaft == shaft)
             {
                 string pos = "<" + (string) base_doorway_pos.x + "," +
