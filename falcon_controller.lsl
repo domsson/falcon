@@ -87,13 +87,12 @@ list parse_ident(string ident, string sep)
     return [llList2String(tks, 0), llList2String(tks, 1), llList2String(tks, 2)];
 }
 
-/*
- * Reads the object's description and parses its contents as a list 
- * of three string elements: bank, shaft and floor identifier.
- */
-list get_identifiers()
+string get_ident()
 {
-    return parse_ident(llGetObjectDesc(), ":");
+    // This is all this does at the moment, yet. But wait, don't delete this
+    // function yet! The point is that we might implement some more advanced
+    // logic here in the future. Caching the description string, for example.
+    return llGetObjectDesc();
 }
 
 process_message(integer chan, string name, key id, string msg)
@@ -177,7 +176,8 @@ handle_cmd_status(string sig, key id, string ident, list params, list details)
  */ 
 send_message(key id, string cmd, list params)
 {
-    list msg = [SIGNATURE, llDumpList2String(get_identifiers(), ":"),
+    //list msg = [SIGNATURE, llDumpList2String(get_identifiers(), ":"),
+    list msg = [SIGNATURE, get_ident(),
                 cmd,  llDumpList2String(params, " ")];
     llRegionSayTo(id, CHANNEL, llDumpList2String(msg, " "));
 }
@@ -188,7 +188,8 @@ send_message(key id, string cmd, list params)
  */
 send_broadcast(string cmd, list params)
 {
-    list msg = [SIGNATURE, llDumpList2String(get_identifiers(), ":"),
+    //list msg = [SIGNATURE, llDumpList2String(get_identifiers(), ":"),
+    list msg = [SIGNATURE, get_ident(),
                 cmd,  llDumpList2String(params, " ")];
     llRegionSay(CHANNEL, llDumpList2String(msg, " "));
 }
@@ -354,6 +355,7 @@ integer set_shaft_details(string shaft, float doorway_offset, string recall_floo
     return TRUE;
 }
 
+// TODO: rename this function to something that better describes what it does
 integer init_recall_floors()
 {
     integer success = TRUE;
@@ -501,11 +503,7 @@ integer all_components_setup()
 
 sort_components()
 {
-    cabs     = llListSort(cabs,     cabs_stride,     TRUE);
-    doorways = llListSort(doorways, doorways_stride, TRUE);
-    buttons  = llListSort(buttons,  buttons_stride,  TRUE);
-    shafts   = llListSort(shafts,   shafts_stride,   TRUE);
-    floors   = llListSort(floors,   floors_stride,   TRUE);
+    floors = llListSort(floors, floors_stride, TRUE);
 }
 
 integer init()
@@ -537,7 +535,7 @@ default
 }
 
 /*
- * Broadcast a pairing request to all objects in in the region, then wait
+ * Broadcast a pairing request to all objects in the region, then wait
  * for a reply from suitable components (same owner, same elevator bank) 
  * and keep track of them.
  */
@@ -563,17 +561,21 @@ state pairing
     timer()
     {        
         llSetTimerEvent(0.0);
+        /*
         llOwnerSay("Cabs: "     + (string) get_strided_length(cabs, cabs_stride));
         llOwnerSay("Doorways: " + (string) get_strided_length(doorways, doorways_stride));
         llOwnerSay("Buttons: "  + (string) get_strided_length(buttons, buttons_stride));
+        */
         
         sort_components();
         init_recall_floors();
         
+        /*
         debug("Floors: "   + llDumpList2String(floors, " "));
         debug("Doorways: " + llDumpList2String(doorways, " "));
         debug("Shafts: "   + llDumpList2String(shafts, " "));
         debug("Cabs: "     + llDumpList2String(cabs, " "));
+        */
         
         llOwnerSay("Pairing done.");
         state setup;
