@@ -89,7 +89,7 @@ integer listen_handle;
 string  current_state;
 
 ////////////////////////////////////////////////////////////////////////////////
-////  FUNCTIONS                                                             ////
+////  UTILITY FUNCTIONS                                                     ////
 ////////////////////////////////////////////////////////////////////////////////
 
 /*
@@ -103,10 +103,21 @@ debug(string msg)
     }
 }
 
+/*
+ * Rounds the given float to the given number of digits in the fractional part.
+ */
 float round(float val, integer digits)
 {
     float factor = llPow(10, digits);
     return llRound(val * factor) / factor;
+}
+
+/*
+ * Get the length of the strided list `l`, given it's stride length `s`.
+ */
+integer get_strided_length(list l, integer s)
+{
+    return llGetListLength(l) / s;
 }
 
 /*
@@ -149,6 +160,10 @@ send_broadcast(string cmd, list params)
                 cmd, llDumpList2String(params, " ")];
     llRegionSay(CHANNEL, llDumpList2String(msg, " "));
 }
+
+////////////////////////////////////////////////////////////////////////////////
+////  MESSAGE HANDLING FUNCTIONS                                            ////
+////////////////////////////////////////////////////////////////////////////////
 
 /*
  * Handles the incoming message. Returns a numeric value, where TRUE and other 
@@ -226,14 +241,6 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
     
     // Message has not been handled after all
     return NOT_HANDLED;
-}
-
-/*
- * Get the length of the strided list `l`, given it's stride length `s`.
- */
-integer get_strided_length(list l, integer s)
-{
-    return llGetListLength(l) / s;
 }
 
 /*
@@ -365,20 +372,29 @@ list get_closest_doorway(string shaft, float zpos)
     integer closest_doorway  = -1;
     float   closest_distance = FLOAT_MAX;
     
-    // doorways: [string floor, string shaft, key uuid, ...]
-    
     integer num_doorways = get_strided_length(doorways, DOORWAYS_STRIDE);
     integer i;
     
     for (i = 0; i < num_doorways; ++i)
     {
-        string doorway_shaft = llList2String(doorways, i * DOORWAYS_STRIDE + DOORWAYS_IDX_SHAFT);
+        // Get the shaft name of this doorway
+        integer shaft_idx = i * DOORWAYS_STRIDE + DOORWAYS_IDX_SHAFT;
+        string doorway_shaft = llList2String(doorways, shaft_idx);
+        
+        // Only continue if the doorway belongs to the shaft of interest
         if (shaft == doorway_shaft)
         {
-            string doorway_floor = llList2String(doorways, i * DOORWAYS_STRIDE + DOORWAYS_IDX_FLOOR);
-            float  doorway_zpos  = get_doorway_zpos(doorway_floor);
-            float  distance = llFabs(doorway_zpos - zpos);
+            // Get the floor name of this doorway
+            integer floor_idx = i * DOORWAYS_STRIDE + DOORWAYS_IDX_FLOOR;
+            string doorway_floor = llList2String(doorways, floor_idx);
+            
+            // Get the z-position of this doorway
+            float doorway_zpos = get_doorway_zpos(doorway_floor);
+            
+            // Calculate the distance of the doorway to the given zpos
+            float distance = llFabs(doorway_zpos - zpos);
         
+            // Check if this doorway is closer than any previous one
             if (distance < closest_distance)
             {
                 closest_doorway  = i;
@@ -386,13 +402,20 @@ list get_closest_doorway(string shaft, float zpos)
             }
         }
     }
+     
+    // Return the index of the closest doorway, plus its distance
     return [closest_doorway, closest_distance];
 }
 
-integer set_shaft_details(string shaft, float doorway_offset, string recall_floor)
+/*
+ * Amend the list entry for the given `shaft` by adding/updating the members
+ * `doorway_offset` and `recall_floor` (aka. `base_floor`) to the given values.
+ * Returns TRUE on success, FALSE if the given floor or shaft are not known.
+ */
+integer set_shaft_details(string shaft, float dw_offset, string base_floor)
 {
     // Check if the given floor exists in the `floors` list
-    integer floor_index = llListFindList(floors, [recall_floor]);
+    integer floor_index = llListFindList(floors, [base_floor]);
     if (floor_index == NOT_FOUND)
     {
         return FALSE;
@@ -406,11 +429,17 @@ integer set_shaft_details(string shaft, float doorway_offset, string recall_floo
     }
     
     // shafts: [string name, float doorway_offset, string recall_floor...]
-    shafts = llListReplaceList(shafts, [doorway_offset, recall_floor], shaft_index + 1, shaft_index + 2);
+    integer start = shaft_index + 1;
+    integer end   = shaft_index + 2;
+    shafts = llListReplaceList(shafts, [dw_offset, base_floor], start, end);
     return TRUE;
 }
 
-// TODO: rename this function to something that better describes what it does
+/*
+ * Find the closest doorway to each cab (on the z-axis), then updates the shafts 
+ * list with that information, effectively inserting the base/recall doorways.
+ * Returns TRUE on success, FALSE if none or not all entries could be updated.
+ */
 integer init_recall_floors()
 {
     integer success = TRUE;
@@ -419,21 +448,25 @@ integer init_recall_floors()
     
     for (i = 0; i < num_cabs; ++i)
     {
-        // doorways: [string floor, string shaft, key uuid, ...]
-        // cabs:     [string shaft, key uuid, ...]
-        
+        // Get the cab's UUID and the name of its shaft
         key    cab_uuid  = llList2Key(cabs,    i * CABS_STRIDE + CABS_IDX_UUID);
         string cab_shaft = llList2String(cabs, i * CABS_STRIDE + CABS_IDX_SHAFT);
         
+        // Query the position of the cab so we can get its z-position
         list   details = llGetObjectDetails(cab_uuid, [OBJECT_POS]);
         vector pos     = llList2Vector(details, 0);
         
-        list closest_doorway = get_closest_doorway(cab_shaft, pos.z);
-        integer doorway_index  = llList2Integer(closest_doorway, 0);
-        float   doorway_offset = llList2Float(closest_doorway, 1);
-        string  doorway_floor  = llList2String(doorways, doorway_index * DOORWAYS_STRIDE + DOORWAYS_IDX_FLOOR);
+        // Get information on the closest doorway to the given z-position
+        list closest_dw = get_closest_doorway(cab_shaft, pos.z);
         
-        if (set_shaft_details(cab_shaft, doorway_offset, doorway_floor) == FALSE)
+        // Extract and gather more information on the closest doorway
+        integer dw_index  = llList2Integer(closest_dw, 0);
+        float   dw_offset = llList2Float(closest_dw, 1);
+        integer dw_floor_idx = dw_index * DOORWAYS_STRIDE + DOORWAYS_IDX_FLOOR;
+        string  dw_floor  = llList2String(doorways, dw_floor_idx);
+        
+        // Update the shafts list with this doorway's nfo
+        if (set_shaft_details(cab_shaft, dw_offset, dw_floor) == FALSE)
         {
             success = FALSE;
         }
@@ -441,10 +474,12 @@ integer init_recall_floors()
     return success;
 }
 
+/*
+ * Returns the name of the base/recall floor for the given shaft.
+ */
 string get_recall_floor(string shaft)
 {
     integer idx = llListFindList(shafts, [shaft]);
-    // shafts: [string name, float doorway_offset, string recall_floor...]
     return llList2String(shafts, idx + SHAFTS_IDX_RECALL_FLOOR);
 }
 
@@ -463,21 +498,26 @@ list get_floor_info(string shaft)
 
     for (f = 0; f < num_floors; ++f)
     {
-        // doorways: [string floor, string shaft, key uuid, ...]
-        // floors:   [float z-pos, string name, ...]        
-        float  f_zpos  = llList2Float(floors,  f * FLOORS_STRIDE + FLOORS_IDX_ZPOS);
-        string f_name  = llList2String(floors, f * FLOORS_STRIDE + FLOORS_IDX_NAME);
+        // Get floor name and z-position
+        integer zpos_idx = f * FLOORS_STRIDE + FLOORS_IDX_ZPOS;
+        integer name_idx = f * FLOORS_STRIDE + FLOORS_IDX_NAME;
+        float  f_zpos = llList2Float(floors, zpos_idx);
+        string f_name = llList2String(floors, name_idx);
         
         // Check if there is a doorway for this floor and shaft
         integer access = llListFindList(doorways, [f_name, shaft]) != NOT_FOUND;
         
-        floor_info += [ f_name + ":" + (string) access ];
+        // Add the info to the list
+        floor_info += [f_name + ":" + (string) access];
     }
-    
     return floor_info;
 }
 
-// TODO: this is MASSIVE... both in size as well as in complexity :(
+/*
+ * Gathers all the information that the doorways need to perform setup, then 
+ * sends a setup request message with all that information to the doorways.
+ * Returns the number of doorways that were messaged.
+ */
 integer request_doorway_setup()
 {
     integer num_doorways_messaged = 0;
@@ -490,58 +530,81 @@ integer request_doorway_setup()
     
     for (s = 0; s < num_shafts; ++s)
     {
-        // shafts:   [string name, float doorway_offset, string recall_floor...]
-        // doorways: [string floor, string shaft, key uuid, ...]
+        // Get the shaft's name and recall floor name
+        integer shaft_idx    = s * SHAFTS_STRIDE + SHAFTS_IDX_NAME;
+        integer rc_floor_idx = s * SHAFTS_STRIDE + SHAFTS_IDX_RECALL_FLOOR;
+        string shaft    = llList2String(shafts, shaft_idx);
+        string rc_floor = llList2String(shafts, rc_floor_idx);
         
-        string shaft = llList2String(shafts, s * SHAFTS_STRIDE + SHAFTS_IDX_NAME);
-        string recall_floor = llList2String(shafts, s * SHAFTS_STRIDE + SHAFTS_IDX_RECALL_FLOOR);
-        integer base_doorway_idx = llListFindList(doorways, [recall_floor, shaft]);
-        // TODO: what if the above line yields NOT_FOUND?
-        key base_doorway_uuid = llList2Key(doorways, base_doorway_idx + DOORWAYS_IDX_UUID);
+        // Find the doorways of the shaft's recall floor and get its UUID
+        integer base_dw_idx = llListFindList(doorways, [rc_floor, shaft]);
+        integer base_dw_uuid_idx = base_dw_idx + DOORWAYS_IDX_UUID;
+        key base_dw_uuid = llList2Key(doorways, base_dw_uuid_idx);
         
-        list base_doorway_details = llGetObjectDetails(base_doorway_uuid, [OBJECT_POS, OBJECT_ROT]);
-        vector   base_doorway_pos = llList2Vector(base_doorway_details, 0);
-        rotation base_doorway_rot = llList2Rot(base_doorway_details, 1);
+        // Query the base/recall doorway's position and rotation
+        list pos_rot = [OBJECT_POS, OBJECT_ROT];
+        list base_dw_details = llGetObjectDetails(base_dw_uuid, pos_rot);
+        vector   base_dw_pos = llList2Vector(base_dw_details, 0);
+        rotation base_dw_rot = llList2Rot(base_dw_details, 1);
         
-        string f_info   = llDumpList2String(get_floor_info(shaft), ",");
-        string f_recall = get_recall_floor(shaft);
+        // Construct the floor info string
+        string floor_info = llDumpList2String(get_floor_info(shaft), ",");
         
         for (d = 0; d < num_doorways; ++d)
         {
             // doorways: [string floor, string shaft, key uuid, ...]
             // floors:   [float z-pos, string name, ...]
             
-            string doorway_shaft = llList2String(doorways, d * DOORWAYS_STRIDE + DOORWAYS_IDX_SHAFT);
-                       
-            if (doorway_shaft == shaft)
+            integer dw_shaft_idx = d * DOORWAYS_STRIDE + DOORWAYS_IDX_SHAFT;
+            string dw_shaft = llList2String(doorways, dw_shaft_idx);
+                   
+            // Continue with the next iteration if the shaft doesn't match    
+            if (dw_shaft != shaft)
             {
-                key    doorway_uuid  = llList2Key(doorways, d * DOORWAYS_STRIDE + DOORWAYS_IDX_UUID);
-                string doorway_floor = llList2String(doorways, d * DOORWAYS_STRIDE + DOORWAYS_IDX_FLOOR);
-                
-                integer recall_floor_idx  = llListFindList(floors, [f_recall]) / DOORWAYS_STRIDE;
-                integer doorway_floor_idx = llListFindList(floors, [doorway_floor]) / DOORWAYS_STRIDE; 
-            
-                string pos = "<" + (string) base_doorway_pos.x + "," +
-                                   (string) base_doorway_pos.y + "," + 
-                                   (string) base_doorway_pos.z + ">";
-                string rot = "<" + (string) base_doorway_rot.x + "," + 
-                                   (string) base_doorway_rot.y + "," + 
-                                   (string) base_doorway_rot.z + "," + 
-                                   (string) base_doorway_rot.s + ">";
-                
-                //
-                //                                   .- pos of reference doorway
-                //                                   |    .- rot of reference doorway
-                //                                   |    |    .- list of all floors
-                //                                   |    |    |       .- recall floor index
-                //                                   |    |    |       |                 .- your floor index
-                //                                   |    |    |       |                 |
-                send_message(doorway_uuid, "setup", [pos, rot, f_info, recall_floor_idx, doorway_floor_idx]);
-                ++num_doorways_messaged;
+                jump request_doorway_setup_continue;
             }
+            
+            // Get the doorways' UUID and floor name
+            integer dw_uuid_idx  = d * DOORWAYS_STRIDE + DOORWAYS_IDX_UUID;
+            integer dw_floor_idx = d * DOORWAYS_STRIDE + DOORWAYS_IDX_FLOOR;
+            key    dw_uuid  = llList2Key(doorways, dw_uuid_idx);
+            string dw_floor = llList2String(doorways, dw_floor_idx);
+            
+            // Find the list indices for the recall floor, as well as 
+            // this doorway's floor; for this we use the floor names:
+            // [float zpos, string name, ...]
+            integer rc_fl_idx = llListFindList(floors, [rc_floor]) - 1;
+            integer dw_fl_idx = llListFindList(floors, [dw_floor]) - 1;
+            integer rc_fl_num = rc_fl_idx / FLOORS_STRIDE;
+            integer dw_fl_num = dw_fl_idx / FLOORS_STRIDE; 
+        
+            // We now assemble strings from the position and rotation
+            string pos = "<" + (string) base_dw_pos.x + "," +
+                               (string) base_dw_pos.y + "," + 
+                               (string) base_dw_pos.z + ">";
+            string rot = "<" + (string) base_dw_rot.x + "," + 
+                               (string) base_dw_rot.y + "," + 
+                               (string) base_dw_rot.z + "," + 
+                               (string) base_dw_rot.s + ">";
+            
+            // Lastly, we gather and pack all the relevant parameters
+            //
+            //             .- pos of reference doorway
+            //             |    .- rot of reference doorway
+            //             |    |    .- list of all floors
+            //             |    |    |           .- recall floor index
+            //             |    |    |           |          .- dw floor index
+            //             |    |    |           |          |
+            list params = [pos, rot, floor_info, rc_fl_num, dw_fl_num];
+            
+            // Finally, we can send the setup message to the doorway
+            send_message(dw_uuid, "setup", params);
+            ++num_doorways_messaged;
+            
+            // Label for skipping an interation of this loop
+            @request_doorway_setup_continue;
         }
     }
-    
     return num_doorways_messaged;
 }
 
