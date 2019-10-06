@@ -31,7 +31,6 @@ list    cabs;
 integer cabs_stride = 2;
 
 // List of all `doorway` objects for this bank
-// TODO: should we store floor index instead of floor name?
 // [string floor, string shaft, key uuid, ...]
 list    doorways;
 integer doorways_stride = 3;
@@ -42,8 +41,7 @@ list    buttons;
 integer buttons_stride = 2;
 
 // List of all elevator shafts in this bank
-// TODO: should we store floor name instead of index?
-// [string name, float doorway_offset, integer recall_floor...]
+// [string name, float doorway_offset, string recall_floor...]
 list    shafts;
 integer shafts_stride = 3;
 
@@ -231,7 +229,7 @@ integer add_cab(key uuid, string shaft)
     }
     
     // Add the shaft
-    shafts += [shaft, 0.0, 0];
+    shafts += [shaft, 0.0, ""];
     
     return TRUE;
 }
@@ -309,20 +307,19 @@ integer get_closest_doorway(float zpos, string shaft)
     integer closest_doorway  = -1;
     float   closest_distance = FLOAT_MAX;
     
-    // doorways list:
-    //          0             1          2
-    // [string floor, string shaft, key uuid, ...]
+    // doorways: [string floor, string shaft, key uuid, ...]
     
-    integer i;
     integer num_doorways = get_strided_length(doorways, doorways_stride);
+    integer i;
+    
     for (i = 0; i < num_doorways; ++i)
     {
         string doorway_shaft = llList2String(doorways, i * doorways_stride + 1);
         if (shaft == doorway_shaft)
         {
             string doorway_floor = llList2String(doorways, i * doorways_stride + 0);
-            float doorway_zpos = get_doorway_zpos(doorway_floor);
-            float distance = llFabs(doorway_zpos - zpos);
+            float  doorway_zpos  = get_doorway_zpos(doorway_floor);
+            float  distance = llFabs(doorway_zpos - zpos);
         
             if (distance < closest_distance)
             {
@@ -349,10 +346,10 @@ integer set_recall_floor(string shaft, string floor)
         return FALSE;
     }
     
-    // shafts: [string name, float doorway_offset, integer recall_floor...]
+    // shafts: [string name, float doorway_offset, string recall_floor...]
     integer shaft_offset = shaft_index * shafts_stride + 2;
     
-    shafts = llListReplaceList(shafts, [floor_index], shaft_offset, shaft_offset);
+    shafts = llListReplaceList(shafts, [floor], shaft_offset, shaft_offset);
     return TRUE;
 }
 
@@ -405,15 +402,11 @@ integer get_strided_index_by_member(list l, integer s, integer o, string m)
     return NOT_FOUND;
 }
 
-integer get_recall_floor(string shaft)
+string get_recall_floor(string shaft)
 {
     integer idx = llListFindList(shafts, [shaft]);
-    if (idx == NOT_FOUND)
-    {
-        return NOT_FOUND;
-    }
-    // shafts:   [string name, float doorway_offset, integer recall_floor...]
-    return llList2Integer(shafts, idx + 2);
+    // shafts: [string name, float doorway_offset, string recall_floor...]
+    return llList2String(shafts, idx + 2);
 }
 
 /*
@@ -431,13 +424,13 @@ list get_floor_info(string shaft)
     
     for (f = 0; f < num_floors; ++f)
     {
-        // doorways: [float z-pos, string floor, string shaft, key uuid]
+        // doorways: [string floor, string shaft, key uuid]
         // floors:   [float z-pos, string name, ...]
         
         float  f_zpos = llList2Float(floors, f * floors_stride + 0);
         string f_name = llList2String(floors, f * floors_stride + 1);
         
-        integer accessible = llListFindList(doorways, [f_zpos, f_name, shaft]) != NOT_FOUND;
+        integer accessible = llListFindList(doorways, [f_name, shaft]) != NOT_FOUND;
         
         floor_info += [ f_name + ":" + (string) accessible ];
     }
@@ -473,7 +466,7 @@ integer request_doorway_setup()
         vector base_doorway_pos = llList2Vector(base_doorway_details, 0);
         rotation base_doorway_rot = llList2Rot(base_doorway_details, 1);
         string f_info = llDumpList2String(get_floor_info(shaft), ",");
-        integer f_recall = get_recall_floor(shaft);
+        string f_recall = get_recall_floor(shaft);
         
         for (d = 0; d < num_doorways; ++d)
         {
@@ -493,6 +486,16 @@ integer request_doorway_setup()
                                    (string) base_doorway_rot.y + "," + 
                                    (string) base_doorway_rot.z + "," + 
                                    (string) base_doorway_rot.s + ">";
+                                   
+                // TODO: why are we giving the recall floor via floor NAME
+                //       but the floor the doorway is on via floor INDEX?
+                //
+                //                                   .- pos of reference doorway
+                //                                   |    .- rot of reference doorway
+                //                                   |    |    .- list of all floors
+                //                                   |    |    |       .- recall floor name
+                //                                   |    |    |       |         .- idx of your floor
+                //                                   |    |    |       |         |
                 send_message(doorway_uuid, "setup", [pos, rot, f_info, f_recall, doorway_floor_idx]);
             }
         }
