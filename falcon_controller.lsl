@@ -233,35 +233,59 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
     // Parse the object's ident string into a list
     list ident_tokens = parse_ident(ident, ":");
     
+    // Get the state of the object
+    string status = llList2String(params, 0);
+    
     // Handle based on type of object
     if (sig == "falcon-cab")
     {
-        // Add the cab to our list
-        string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
-        add_shaft(shaft);
-        return add_cab(id, shaft);
+        // Perform status update
+        integer idx = llListFindList(cabs, [id]);
+        cabs = llListReplaceList(cabs, [status], idx+1, idx+1);
+        
+        if (status == "paired")
+        {
+            // Add the cab to our list
+            string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
+            add_shaft(shaft);
+            return add_cab(id, shaft);
+        }
     }
     if (sig == "falcon-doorway")
     {
-        // Query doorway object's details to get its z-position
-        list details = llGetObjectDetails(id, [OBJECT_POS]);
-        vector pos   = llList2Vector(details, 0);
-        float zpos   = round(pos.z, 2);
+        // Perform status update
+        integer idx = llListFindList(doorways, [id]);
+        doorways = llListReplaceList(doorways, [status], idx+1, idx+1);
         
-        // Parse floor and shaft name from doorway's ident string
-        string floor = llList2String(ident_tokens, IDENT_IDX_FLOOR);
-        string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
-        
-        // Add the doorway to our list
-        integer success = TRUE;
-        add_floor(zpos, floor);
-        return add_doorway(id, floor, shaft);
+        if (status == "paired")
+        {
+            // Query doorway object's details to get its z-position
+            list details = llGetObjectDetails(id, [OBJECT_POS]);
+            vector pos   = llList2Vector(details, 0);
+            float zpos   = round(pos.z, 2);
+            
+            // Parse floor and shaft name from doorway's ident string
+            string floor = llList2String(ident_tokens, IDENT_IDX_FLOOR);
+            string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
+            
+            // Add the doorway to our list
+            integer success = TRUE;
+            add_floor(zpos, floor);
+            return add_doorway(id, floor, shaft);
+        }
     }
     if (sig == "falcon-buttons")
     {
-        // Add the call buttons to our list
-        string floor = llList2String(ident_tokens, IDENT_IDX_FLOOR);
-        return add_buttons(id, floor);
+        // Perform status update
+        integer idx = llListFindList(buttons, [id]);
+        buttons = llListReplaceList(buttons, [status], idx+1, idx+1);
+        
+        if (status == "paired")
+        {
+            // Add the call buttons to our list
+            string floor = llList2String(ident_tokens, IDENT_IDX_FLOOR);
+            return add_buttons(id, floor);
+        }
     }
     
     // Message has not been handled after all

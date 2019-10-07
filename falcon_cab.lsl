@@ -9,7 +9,8 @@ string  SIGNATURE = "falcon-cab";
 string SIG_CONTROLLER = "falcon-control";
 
 integer NOT_FOUND = -1; // ll* functions often return -1 to indicate 'not found'
-integer NOT_HANDLED = -8;
+integer NOT_HANDLED = -8; // No particular reason for -8, just felt like it
+integer NEXT_STATE = 57473; // That's leet for STATE, duh
 float   FLOAT_MAX = 3.402823466E+38;
 
 integer MSG_IDX_SIG    = 0;
@@ -136,22 +137,38 @@ integer process_message(integer chan, string name, key id, string msg)
     {
         return handle_cmd_ping(id, sig, ident);
     }
-    if (cmd == "pair")
-    {
-        return handle_cmd_pair(id, sig, ident);
-    }
     if (cmd == "status")
     {
         return handle_cmd_status(id, sig, ident);
     }
-
+    if (cmd == "pair")
+    {
+        return handle_cmd_pair(id, sig, ident);
+    }
+    if (cmd == "setup")
+    {
+        return handle_cmd_setup(id, sig, ident);
+    }
+    
     // Message has not been handled
     return NOT_HANDLED;
 }
 
 integer handle_cmd_ping(key id, string sig, string ident)
-{    
+{
     send_message(id, "pong", []);
+    return TRUE;
+}
+
+integer handle_cmd_status(key id, string sig, string ident)
+{
+    // Abort if `bank` doesn't match
+    if (!ident_matches(ident, IDENT_IDX_BANK))
+    {
+        return NOT_HANDLED;
+    }
+    
+    send_message(id, "status", [current_state, controller]);
     return TRUE;
 }
 
@@ -175,7 +192,7 @@ integer handle_cmd_pair(key id, string sig, string ident)
     return TRUE;
 }
 
-integer handle_cmd_status(key id, string sig, string ident)
+integer handle_cmd_setup(key id, string sig, string ident)
 {
     // Abort if `bank` doesn't match
     if (!ident_matches(ident, IDENT_IDX_BANK))
@@ -183,9 +200,9 @@ integer handle_cmd_status(key id, string sig, string ident)
         return NOT_HANDLED;
     }
     
-    send_message(id, "status", [current_state, controller]);
-    return TRUE;
+    return NEXT_STATE;
 }
+
 
 /*
  * Sets the global variable `controller` to the UUID supplied in `id`.
@@ -244,7 +261,7 @@ state booted
      
     listen(integer channel, string name, key id, string message)
     {
-        process_message(channel, name, id, message);
+        integer result = process_message(channel, name, id, message);
     
         // Check if we've been paired and change state if so
         if (controller != NULL_KEY)
@@ -272,7 +289,7 @@ state paired
         print_state_info();
         
         // We inform the controller of our status change
-        send_message(controller, "status", ["paired", controller]);
+        send_message(controller, "status", [current_state, controller]);
         
         // We could only listen for messages by the controller as we now know 
         // its UUID; however, that could get us stuck if the controller UUID 
@@ -282,7 +299,13 @@ state paired
     
     listen(integer channel, string name, key id, string message)
     {
-        process_message(channel, name, id, message);
+        integer result = process_message(channel, name, id, message);
+        
+        // Check if a message handler has requested a switch to the next state
+        if (result == NEXT_STATE)
+        {
+            state setup;
+        }
     }
     
     state_exit()
@@ -297,11 +320,14 @@ state setup
     {
         current_state = "setup";
         print_state_info();
+        
+        // We inform the controller of our status change
+        send_message(controller, "status", [current_state]);
     }
 
     listen(integer channel, string name, key id, string message)
     {
-        process_message(channel, name, id, message);
+        integer result = process_message(channel, name, id, message);
     }
 
     state_exit()
@@ -320,11 +346,14 @@ state ready
     {
         current_state = "ready";
         print_state_info();
+        
+        // We inform the controller of our status change
+        send_message(controller, "status", [current_state]);
     }
 
     listen(integer channel, string name, key id, string message)
     {
-        process_message(channel, name, id, message);
+        integer result = process_message(channel, name, id, message);
     }
      
     state_exit()
@@ -342,7 +371,11 @@ state error
 {
     state_entry()
     {
-        // Nothing yet
+        current_state = "error";
+        print_state_info();
+        
+        // We inform the controller of our status change
+        send_message(controller, "status", [current_state]);
     }
      
     state_exit()
