@@ -108,6 +108,23 @@ print_state_info()
      debug("State: " + current_state + " (" + (string) llGetUsedMemory() + ")");
 }
 
+print_component_info()
+{
+    integer num_shafts  = get_strided_length(shafts,   SHAFTS_STRIDE);
+    integer num_cabs    = get_strided_length(cabs,     CABS_STRIDE);
+    integer num_floors  = get_strided_length(floors,   FLOORS_STRIDE);
+    integer num_doors   = get_strided_length(doorways, DOORWAYS_STRIDE);
+    integer num_buttons = get_strided_length(buttons,  BUTTONS_STRIDE);
+    
+    debug("Components:\n" + 
+            "- " + (string) num_shafts  + " shafts\n" +
+            "- " + (string) num_cabs    + " cabs\n" + 
+            "- " + (string) num_floors  + " floors\n" + 
+            "- " + (string) num_doors   + " doorways\n" + 
+            "- " + (string) num_buttons + " call buttons\n"
+    );
+}
+
 /*
  * Rounds the given float to the given number of digits in the fractional part.
  */
@@ -691,8 +708,11 @@ state pairing
         llSetTimerEvent(0.0);
         
         sort_components();
+        init_recall_floors();
 
         llOwnerSay("Pairing done.");
+        print_component_info();
+
         state setup;
     }
     
@@ -712,6 +732,9 @@ state setup
         // TODO send 'setup' message to all components
         request_doorway_setup();
         request_cab_setup();
+        
+        debug("Cabs:\n" + llDumpList2String(cabs, " "));
+        debug("Shafts:\n" + llDumpList2String(shafts, " "));
         
         llSetTimerEvent(SETUP_TIME);
     }
