@@ -11,7 +11,7 @@ string SIGNATURE_DOORWAY = "falcon-doorway";
 string SIGNAUTRE_BUTTONS = "falcon-buttons";
 
 integer NOT_FOUND = -1; // ll* functions often return -1 to indicate 'not found'
-integer NOT_HANDLED = -8;
+integer NOT_HANDLED = -8; // No particular reason for -8, just felt like it
 float   FLOAT_MAX = 3.402823466E+38;
 
 float PAIRING_TIME = 3.0;
@@ -34,29 +34,32 @@ integer IDENT_IDX_FLOOR = 2;
 ////////////////////////////////////////////////////////////////////////////////
 
 // List of all `cab` objects operating in this bank
-// [string shaft, key uuid, ...]
+// [string shaft, key uuid, string state, ...]
 list    cabs;
-integer CABS_STRIDE = 2;
+integer CABS_STRIDE = 3;
 
 integer CABS_IDX_SHAFT = 0;
 integer CABS_IDX_UUID  = 1;
+integer CABS_IDX_STATE = 2;
 
 // List of all `doorway` objects for this bank
-// [string floor, string shaft, key uuid, ...]
+// [string floor, string shaft, key uuid, string state, ...]
 list    doorways;
-integer DOORWAYS_STRIDE = 3;
+integer DOORWAYS_STRIDE = 4;
 
 integer DOORWAYS_IDX_FLOOR = 0;
 integer DOORWAYS_IDX_SHAFT = 1;
 integer DOORWAYS_IDX_UUID  = 2;
+integer DOORWAYS_IDX_STATE = 3;
 
 // List of all `call_buttons` objects for this bank
-// [string floor, key uuid, ...]
+// [string floor, key uuid, string state ...]
 list    buttons;
-integer BUTTONS_STRIDE = 2;
+integer BUTTONS_STRIDE = 3;
 
 integer BUTTONS_IDX_FLOOR = 0;
-integer BUTTONS_IDX_UUID  = 0;
+integer BUTTONS_IDX_UUID  = 1;
+integer BUTTONS_IDX_STATE = 2;
 
 // List of all elevator shafts in this bank
 // [string name, float doorway_offset, string recall_floor...]
@@ -732,9 +735,6 @@ state setup
         // TODO send 'setup' message to all components
         request_doorway_setup();
         request_cab_setup();
-        
-        debug("Cabs:\n" + llDumpList2String(cabs, " "));
-        debug("Shafts:\n" + llDumpList2String(shafts, " "));
         
         llSetTimerEvent(SETUP_TIME);
     }
