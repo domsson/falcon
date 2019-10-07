@@ -539,21 +539,35 @@ integer request_doorway_setup()
     for (s = 0; s < num_shafts; ++s)
     {
         // Get the shaft's name and recall floor name
-        integer shaft_idx    = s * SHAFTS_STRIDE + SHAFTS_IDX_NAME;
-        integer rc_floor_idx = s * SHAFTS_STRIDE + SHAFTS_IDX_RECALL_FLOOR;
-        string shaft    = llList2String(shafts, shaft_idx);
-        string rc_floor = llList2String(shafts, rc_floor_idx);
+        integer shaft_name_idx  = s * SHAFTS_STRIDE + SHAFTS_IDX_NAME;
+        integer shaft_rc_fl_idx = s * SHAFTS_STRIDE + SHAFTS_IDX_RECALL_FLOOR;
+        string shaft    = llList2String(shafts, shaft_name_idx);
+        string rc_floor = llList2String(shafts, shaft_rc_fl_idx);
         
         // Find the doorway of the shaft's recall floor and get its UUID
         integer base_dw_idx = llListFindList(doorways, [rc_floor, shaft]);
         integer base_dw_uuid_idx = base_dw_idx + DOORWAYS_IDX_UUID;
         key base_dw_uuid = llList2Key(doorways, base_dw_uuid_idx);
         
+        // Find the list index for the recall floor based on it's floor name
+        // [float zpos, string name, ...]
+        integer rc_floor_idx = llListFindList(floors, [rc_floor]) - 1;
+        integer rc_floor_num = rc_floor_idx / FLOORS_STRIDE;
+        
         // Query the base/recall doorway's position and rotation
         list pos_rot = [OBJECT_POS, OBJECT_ROT];
         list base_dw_details = llGetObjectDetails(base_dw_uuid, pos_rot);
         vector   base_dw_pos = llList2Vector(base_dw_details, 0);
         rotation base_dw_rot = llList2Rot(base_dw_details, 1);
+        
+        // Serialize base doorway's position and rotation
+        string pos = "<" + (string) base_dw_pos.x + "," +
+                           (string) base_dw_pos.y + "," + 
+                           (string) base_dw_pos.z + ">";
+        string rot = "<" + (string) base_dw_rot.x + "," + 
+                           (string) base_dw_rot.y + "," + 
+                           (string) base_dw_rot.z + "," + 
+                           (string) base_dw_rot.s + ">";
         
         // Construct the floor info string
         string floor_info = llDumpList2String(get_floor_info(shaft), ",");
@@ -581,29 +595,18 @@ integer request_doorway_setup()
             // Find the list indices for the recall floor, as well as 
             // this doorway's floor; for this we use the floor names:
             // [float zpos, string name, ...]
-            integer rc_fl_idx = llListFindList(floors, [rc_floor]) - 1;
-            integer dw_fl_idx = llListFindList(floors, [dw_floor]) - 1;
-            integer rc_fl_num = rc_fl_idx / FLOORS_STRIDE;
-            integer dw_fl_num = dw_fl_idx / FLOORS_STRIDE; 
-        
-            // We now assemble strings from the position and rotation
-            string pos = "<" + (string) base_dw_pos.x + "," +
-                               (string) base_dw_pos.y + "," + 
-                               (string) base_dw_pos.z + ">";
-            string rot = "<" + (string) base_dw_rot.x + "," + 
-                               (string) base_dw_rot.y + "," + 
-                               (string) base_dw_rot.z + "," + 
-                               (string) base_dw_rot.s + ">";
-            
+            integer floor_idx = llListFindList(floors, [dw_floor]) - 1;
+            integer floor_num = floor_idx / FLOORS_STRIDE; 
+         
             // Lastly, we gather and pack all the relevant parameters
             //
             //             .- pos of reference doorway
             //             |    .- rot of reference doorway
             //             |    |    .- list of all floors
             //             |    |    |           .- recall floor index
-            //             |    |    |           |          .- dw floor index
-            //             |    |    |           |          |
-            list params = [pos, rot, floor_info, rc_fl_num, dw_fl_num];
+            //             |    |    |           |             .- floor index
+            //             |    |    |           |             |
+            list params = [pos, rot, floor_info, rc_floor_num, floor_num];
             
             // Finally, we can send the setup message to the doorway
             send_message(dw_uuid, "setup", params);
