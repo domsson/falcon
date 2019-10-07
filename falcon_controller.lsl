@@ -118,7 +118,7 @@ print_component_info()
     integer num_floors  = get_strided_length(floors,   FLOORS_STRIDE);
     integer num_doors   = get_strided_length(doorways, DOORWAYS_STRIDE);
     integer num_buttons = get_strided_length(buttons,  BUTTONS_STRIDE);
-    
+        
     debug("Components:\n" + 
             "- " + (string) num_shafts  + " shafts\n" +
             "- " + (string) num_cabs    + " cabs\n" + 
@@ -248,7 +248,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
             // Add the cab to our list
             string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
             add_shaft(shaft);
-            return add_cab(id, shaft);
+            return add_cab(id, shaft, status);
         }
     }
     if (sig == "falcon-doorway")
@@ -271,7 +271,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
             // Add the doorway to our list
             integer success = TRUE;
             add_floor(zpos, floor);
-            return add_doorway(id, floor, shaft);
+            return add_doorway(id, floor, shaft, status);
         }
     }
     if (sig == "falcon-buttons")
@@ -284,7 +284,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
         {
             // Add the call buttons to our list
             string floor = llList2String(ident_tokens, IDENT_IDX_FLOOR);
-            return add_buttons(id, floor);
+            return add_buttons(id, floor, status);
         }
     }
     
@@ -313,7 +313,7 @@ integer add_shaft(string shaft)
  * Adds the elevator cab with UUID `uuid` to the list of cabs.
  * Returns TRUE on success, FALSE if the cab was already in the list.
  */
-integer add_cab(key uuid, string shaft)
+integer add_cab(key uuid, string shaft, string status)
 {
     // Abort if the cab with this UUID has already been added
     if (llListFindList(cabs, [uuid]) != NOT_FOUND)
@@ -328,7 +328,7 @@ integer add_cab(key uuid, string shaft)
     }
     
     // Add the cab
-    cabs += [shaft, uuid];
+    cabs += [shaft, uuid, status];
     return TRUE;
 }
 
@@ -370,7 +370,7 @@ integer add_floor(float zpos, string name)
  * Adds the doorway with UUID `uuid` to the list of doorways.
  * Returns TRUE on success, FALSE if the doorway was already in the list.
  */
-integer add_doorway(key uuid, string floor, string shaft)
+integer add_doorway(key uuid, string floor, string shaft, string status)
 {
     // Abort if this doorway is already in the list of doorways
     if (llListFindList(doorways, [uuid]) != NOT_FOUND)
@@ -379,7 +379,7 @@ integer add_doorway(key uuid, string floor, string shaft)
     }
     
     // Add the doorway
-    doorways += [floor, shaft, uuid];
+    doorways += [floor, shaft, uuid, status];
     return TRUE;
 }
 
@@ -387,7 +387,7 @@ integer add_doorway(key uuid, string floor, string shaft)
  * Adds the call buttons with UUID `uuid` to the list of call buttons.
  * Returns TRUE on success, FALSE if these buttons were already in the list.
  */
-integer add_buttons(key uuid, string floor)
+integer add_buttons(key uuid, string floor, string status)
 {
     // Buttons with that UUID have already been added
     if (llListFindList(buttons, [uuid]) != NOT_FOUND)
@@ -398,7 +398,7 @@ integer add_buttons(key uuid, string floor)
     // We explicitly allow for several button objects that operate on
     // the same floor, so we aren't going to check if there is already
     // a button object for the given floor in the list.    
-    buttons += [floor, uuid];
+    buttons += [floor, uuid, status];
     return TRUE;
 }
 
