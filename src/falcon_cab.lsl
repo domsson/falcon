@@ -240,11 +240,16 @@ state setup
         
         // We inform the controller of our status change
         send_message(controller, "status", [current_state]);
+        
+        // TODO: initiate setup of subcomponents!
+        //       then switch to ready state once done,
+        //       or error state in case shit went south.
     }
 
     listen(integer channel, string name, key id, string message)
     {
         integer result = process_message(channel, name, id, message);
+        
     }
 
     state_exit()

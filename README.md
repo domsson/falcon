@@ -317,7 +317,7 @@ controller on the specified channel from here on out.
 #### `status`
 
     > status
-    < status component-status [controller-uuid]
+    < status component-status [status-parameter...]
     
 When send by the controller, this is a request for a `status` reply by 
 all applicable components; that is, all components with the same `bank`.
@@ -325,7 +325,7 @@ all applicable components; that is, all components with the same `bank`.
 If send by a component, this is a reply to a `status` or `pair` request.
 Informs about the general state of a component, which also indicates 
 whether the component is paired to a controller or not. If paired, 
-the controller UUID is given.
+the controller UUID is provided as additionall status parameter.
 
 `component-status` can be either of the following (subject to change):
 

@@ -579,8 +579,33 @@ integer request_cab_setup()
 
 integer all_components_setup()
 {
-    // TODO
-    return FALSE;
+    integer num_cabs = get_strided_length(cabs, CABS_STRIDE);
+    integer c;
+    
+    for (c = 0; c < num_cabs; ++c)
+    {
+        integer idx = c * CABS_STRIDE + CABS_IDX_STATE;
+        string status = llList2String(cabs, idx);
+        if (status != "ready")
+        {
+            return FALSE;
+        }
+    }
+    
+    integer num_doorways = get_strided_length(doorways, DOORWAYS_STRIDE);
+    integer d;
+    
+    for (d = 0; d < num_doorways; ++d)
+    {
+        integer idx = d * DOORWAYS_STRIDE + DOORWAYS_IDX_STATE;
+        string status = llList2String(doorways, idx);
+        if (status != "ready")
+        {
+            return FALSE;
+        }
+    }
+        
+    return TRUE;
 }
 
 sort_components()
