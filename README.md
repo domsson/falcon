@@ -19,6 +19,14 @@ or for distribution to end-users.
 
 This is a very early work-in-progress. There isn't much to see here yet.
 
+# Running
+
+This project is making use of Firestorm viewer's 
+[LSL preprocessor](https://wiki.firestormviewer.org/fs_preprocessor), more 
+specifically its `#include` and `#define` features. You will have to use that 
+in order to compile the scripts. To do so, point the viewer's script include 
+directory to the `lib` folder of this repo.
+
 # Concept
 
 The following are notes on how the system is intended to work; these are 
@@ -321,7 +329,7 @@ the controller UUID is given.
 
 `component-status` can be either of the following (subject to change):
 
-- `booted`: only basic initialization has been done, not yet paired
+- `default`: only basic initialization has been done, not yet paired
 - `paired`: paired with controller, but setup not yet done
 - `setup`:  currently in the setup process
 - `ready`:  setup complete, ready for operation
@@ -349,5 +357,5 @@ that allows outside scripts to hook into the system. The general idea as
 of now is to have the controller listen for a `subscribe` message on 
 another channel and add all objects that send such a message to a list 
 of subscribers. Then, whenever something of relevance happens, the event 
-can be forwarded to all subscribers. This would allow for people two 
-create scripts for elevator system status panels, elevator engines, etc.
+can be forwarded to all subscribers. This would allow for people to create 
+scripts for elevator system status panels, elevator engines, etc.

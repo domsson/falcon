@@ -1,33 +1,12 @@
 ////////////////////////////////////////////////////////////////////////////////
-////  GENERAL CONSTANTS                                                     ////
+////  INCLUDES AND CONSTANTS                                                ////
 ////////////////////////////////////////////////////////////////////////////////
 
-integer DEBUG = TRUE;
-integer CHANNEL = -130104;
-string  SIGNATURE = "falcon-control";
-
-string SIGNATURE_CAB     = "falcon-cab";
-string SIGNATURE_DOORWAY = "falcon-doorway";
-string SIGNAUTRE_BUTTONS = "falcon-buttons";
-
-integer NOT_FOUND = -1; // ll* functions often return -1 to indicate 'not found'
-integer NOT_HANDLED = -8; // No particular reason for -8, just felt like it
-float   FLOAT_MAX = 3.402823466E+38;
+#include "falcon_constants.lsl"
+string SIGNATURE = SIG_CONTROLLER;
 
 float PAIRING_TIME = 3.0;
 float SETUP_TIME   = 6.0;
-
-integer SHAFTS_MAX = 4;
-integer FLOORS_MAX = 16;
-
-integer MSG_IDX_SIG    = 0;
-integer MSG_IDX_IDENT  = 1;
-integer MSG_IDX_CMD    = 2;
-integer MSG_IDX_PARAMS = 3;
-
-integer IDENT_IDX_BANK  = 0;
-integer IDENT_IDX_SHAFT = 1;
-integer IDENT_IDX_FLOOR = 2;
 
 ////////////////////////////////////////////////////////////////////////////////
 ////  MAIN DATA STRUCTURES                                                  ////
@@ -237,7 +216,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
     string status = llList2String(params, 0);
     
     // Handle based on type of object
-    if (sig == "falcon-cab")
+    if (sig == SIG_CAB)
     {
         // Perform status update
         integer idx = llListFindList(cabs, [id]);
@@ -251,7 +230,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
             return add_cab(id, shaft, status);
         }
     }
-    if (sig == "falcon-doorway")
+    if (sig == SIG_DOORWAY)
     {
         // Perform status update
         integer idx = llListFindList(doorways, [id]);
@@ -274,7 +253,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
             return add_doorway(id, floor, shaft, status);
         }
     }
-    if (sig == "falcon-buttons")
+    if (sig == SIG_BUTTONS)
     {
         // Perform status update
         integer idx = llListFindList(buttons, [id]);

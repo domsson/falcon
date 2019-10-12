@@ -1,26 +1,9 @@
 ////////////////////////////////////////////////////////////////////////////////
-////  GENERAL CONSTANTS                                                     ////
+////  INCLUDES AND CONSTANTS                                                ////
 ////////////////////////////////////////////////////////////////////////////////
 
-integer DEBUG = TRUE;
-integer CHANNEL = -130104;
-string  SIGNATURE = "falcon-cab";
-
-string SIG_CONTROLLER = "falcon-control";
-
-integer NOT_FOUND = -1; // ll* functions often return -1 to indicate 'not found'
-integer NOT_HANDLED = -8; // No particular reason for -8, just felt like it
-integer NEXT_STATE = 57473; // That's leet for STATE, duh
-float   FLOAT_MAX = 3.402823466E+38;
-
-integer MSG_IDX_SIG    = 0;
-integer MSG_IDX_IDENT  = 1;
-integer MSG_IDX_CMD    = 2;
-integer MSG_IDX_PARAMS = 3;
-
-integer IDENT_IDX_BANK  = 0;
-integer IDENT_IDX_SHAFT = 1;
-integer IDENT_IDX_FLOOR = 2;
+#include "falcon_constants.lsl"
+string SIGNATURE = SIG_CAB;
 
 ////////////////////////////////////////////////////////////////////////////////
 ////  OTHER SCRIPT STATE GLOBALS                                            ////
@@ -230,35 +213,13 @@ default
         current_state = "default";
         print_state_info();
         
+        // Perform basic initialization
         init();
-        state booted;
-    }
-    
-    state_exit()
-    {
-        // Nothing yet
-    }
-}
-
-/*
- * Only basic initialization has been done, neither pairing not setup has been 
- * performed yet. In this state, we're waiting for a `pair` request from the  
- * controller. We're also going to listen to `ping` and `status` messages.
- */
-state booted
-{
-    state_entry()
-    {
-        current_state = "booted";
-        print_state_info();
-    
-        // We can't inform the controller of our status change as we don't 
-        // have a reference to the controller yet
-    
+        
         // We're waiting for a `ping`, `pair` or `status` by the controller
         listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
     }
-     
+    
     listen(integer channel, string name, key id, string message)
     {
         integer result = process_message(channel, name, id, message);
