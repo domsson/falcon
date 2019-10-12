@@ -81,7 +81,7 @@ out there; one for each of these cases. For now, one will have to do.
 
 ## Component diagram
 
-![Falcon elevator system component diagram](falcon-components.png)
+![Falcon elevator system component diagram](doc/falcon-components.png)
 
 ## General thoughts
 
@@ -298,11 +298,13 @@ A component's reply to a controller's `ping` message, given that their
 
 #### `pair`
 
-    > pair
+    > pair [channel]
     
 Broadcast or direct message from controller to components, requesting 
 them to pair up with the controller if the `bank` name is a match. 
-Components are expected to reply with a `status` message.
+Components are expected to reply with a `status` message. If the optional 
+`channel` parameter is given, components should listen to messages from the 
+controller on the specified channel from here on out.
 
 #### `status`
 
