@@ -1,26 +1,9 @@
 ////////////////////////////////////////////////////////////////////////////////
-////  GENERAL CONSTANTS                                                     ////
+////  CONSTANTS                                                             ////
 ////////////////////////////////////////////////////////////////////////////////
 
-integer DEBUG = TRUE;
-integer CHANNEL = -130104;
-string  SIGNATURE = "falcon-doorway";
-
-string SIG_CONTROLLER = "falcon-control";
-
-integer NOT_FOUND = -1; // ll* functions often return -1 to indicate 'not found'
-integer NOT_HANDLED = -8; // No particular reason for -8, just felt like it
-integer NEXT_STATE = 57473; // That's leet for STATE, duh
-float   FLOAT_MAX = 3.402823466E+38;
-
-integer MSG_IDX_SIG    = 0;
-integer MSG_IDX_IDENT  = 1;
-integer MSG_IDX_CMD    = 2;
-integer MSG_IDX_PARAMS = 3;
-
-integer IDENT_IDX_BANK  = 0;
-integer IDENT_IDX_SHAFT = 1;
-integer IDENT_IDX_FLOOR = 2;
+#include "falcon_constants.lsl"
+string SIGNATURE = SIG_DOORWAY;
 
 ////////////////////////////////////////////////////////////////////////////////
 ////  OTHER SCRIPT STATE GLOBALS                                            ////
@@ -39,40 +22,7 @@ string  current_state;
 ////  UTILITY FUNCTIONS                                                     ////
 ////////////////////////////////////////////////////////////////////////////////
 
-/*
- * Debug output `msg` via llOwnerSay if the global variable DEBUG is TRUE
- */
-debug(string msg)
-{
-    if (DEBUG)
-    {
-        llOwnerSay(msg);
-    }
-}
-
-print_state_info()
-{
-     debug("State: " + current_state + " (" + (string) llGetUsedMemory() + ")");
-}
-
-/*
- * Parses an identifier string into a list of 3 elements, using `sep` 
- * as the separator to split the string into tokens. An empty string 
- * will yield a list with three empty string elements.
- */
-list parse_ident(string ident, string sep)
-{
-    list tks = llParseString2List(ident, [sep], []);
-    return [llList2String(tks,0), llList2String(tks,1), llList2String(tks,2)];
-}
-
-string get_ident()
-{
-    // This is all this does at the moment, yes. But wait, don't delete this
-    // function yet! The point is that we might implement some more advanced
-    // logic here in the future. Caching the description string, for example.
-    return llGetObjectDesc();
-}
+#include "falcon_common.lsl"
 
 /*
  * Compares the element at position `idx` from the given identifier string
@@ -83,17 +33,6 @@ integer ident_matches(string ident, integer idx)
     list other_tokens = parse_ident(ident, ":");
     list our_tokens   = parse_ident(get_ident(), ":");
     return llList2String(other_tokens, idx) == llList2String(our_tokens, idx);
-}
-
-/*
- * Send a message to the object with UUID `id`.
- * Note: this function depends on the globals `SIGNATURE` and `CHANNEL`.
- */ 
-send_message(key id, string cmd, list params)
-{
-    list msg = [SIGNATURE, get_ident(),
-                cmd, llDumpList2String(params, " ")];
-    llRegionSayTo(id, CHANNEL, llDumpList2String(msg, " "));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -227,35 +166,13 @@ default
         current_state = "default";
         print_state_info();
         
+        // Perform basic initialization
         init();
-        state booted;
-    }
-    
-    state_exit()
-    {
-        // Nothing yet
-    }
-}
-
-/*
- * Only basic initialization has been done, neither pairing not setup has been 
- * performed yet. In this state, we're waiting for a `pair` request from the  
- * controller. We're also going to listen to `ping` and `status` messages.
- */
-state booted
-{
-    state_entry()
-    {
-        current_state = "booted";
-        print_state_info();
-    
-        // We can't inform the controller of our status change as we don't 
-        // have a reference to the controller yet
-    
+        
         // We're waiting for a `ping`, `pair` or `status` by the controller
         listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
     }
-     
+    
     listen(integer channel, string name, key id, string message)
     {
         integer result = process_message(channel, name, id, message);
