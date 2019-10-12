@@ -21,11 +21,11 @@ This is a very early work-in-progress. There isn't much to see here yet.
 
 # Running
 
-This project is making use of Firestorm viewer's 
+This project is making use of Firestorm's 
 [LSL preprocessor](https://wiki.firestormviewer.org/fs_preprocessor), more 
-specifically its `#include` and `#define` features. You will have to use that 
-in order to compile the scripts. To do so, point the viewer's script include 
-directory to the `lib` folder of this repo.
+specifically its `#include` and `#define` features. You'll need those in order 
+to compile the scripts. To do so, point the viewer's script include directory 
+to the `lib` folder of this repo.
 
 # Concept
 
