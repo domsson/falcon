@@ -166,7 +166,7 @@ default
 {
     state_entry()
     {
-        current_state = "default";
+        current_state = STATE_INITIAL;
         print_state_info();
         
         // Perform basic initialization
@@ -202,7 +202,7 @@ state paired
 {
     state_entry()
     {
-        current_state = "paired";
+        current_state = STATE_PAIRED;
         print_state_info();
         
         // We inform the controller of our status change
@@ -221,7 +221,7 @@ state paired
         // Check if a message handler has requested a switch to the next state
         if (result == NEXT_STATE)
         {
-            state setup;
+            state startup;
         }
     }
     
@@ -231,11 +231,11 @@ state paired
     }
 }
 
-state setup
+state startup
 {
     state_entry()
     {
-        current_state = "setup";
+        current_state = STATE_STARTUP;
         print_state_info();
         
         // We inform the controller of our status change
@@ -262,11 +262,11 @@ state setup
  * This is the main operational state. It means the component is all set up 
  * and should operate as intended. 
  */
-state ready
+state running
 {
     state_entry()
     {
-        current_state = "ready";
+        current_state = STATE_RUNNING;
         print_state_info();
         
         // We inform the controller of our status change
@@ -293,7 +293,7 @@ state error
 {
     state_entry()
     {
-        current_state = "error";
+        current_state = STATE_ERROR;
         print_state_info();
         
         // We inform the controller of our status change

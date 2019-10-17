@@ -20,3 +20,10 @@
 #define IDENT_IDX_BANK  0
 #define IDENT_IDX_SHAFT 1
 #define IDENT_IDX_FLOOR 2
+
+#define STATE_INITIAL "default"
+#define STATE_PAIRING "pairing"
+#define STATE_PAIRED  "paired"
+#define STATE_STARTUP "startup"
+#define STATE_RUNNING "running"
+#define STATE_ERROR   "error"

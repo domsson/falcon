@@ -151,7 +151,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
         integer idx = llListFindList(cabs, [id]);
         cabs = llListReplaceList(cabs, [status], idx+1, idx+1);
         
-        if (status == "paired")
+        if (status == STATE_PAIRED)
         {
             // Add the cab to our list
             string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
@@ -165,7 +165,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
         integer idx = llListFindList(doorways, [id]);
         doorways = llListReplaceList(doorways, [status], idx+1, idx+1);
         
-        if (status == "paired")
+        if (status == STATE_PAIRED)
         {
             // Query doorway object's details to get its z-position
             list details = llGetObjectDetails(id, [OBJECT_POS]);
@@ -188,7 +188,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
         integer idx = llListFindList(buttons, [id]);
         buttons = llListReplaceList(buttons, [status], idx+1, idx+1);
         
-        if (status == "paired")
+        if (status == STATE_PAIRED)
         {
             // Add the call buttons to our list
             string floor = llList2String(ident_tokens, IDENT_IDX_FLOOR);
@@ -586,7 +586,7 @@ integer all_components_setup()
     {
         integer idx = c * CABS_STRIDE + CABS_IDX_STATE;
         string status = llList2String(cabs, idx);
-        if (status != "ready")
+        if (status != STATE_RUNNING)
         {
             return FALSE;
         }
@@ -599,7 +599,7 @@ integer all_components_setup()
     {
         integer idx = d * DOORWAYS_STRIDE + DOORWAYS_IDX_STATE;
         string status = llList2String(doorways, idx);
-        if (status != "ready")
+        if (status != STATE_RUNNING)
         {
             return FALSE;
         }
@@ -621,7 +621,7 @@ default
 {
     state_entry()
     {
-        current_state = "default";
+        current_state = STATE_INITIAL;
         print_state_info();
         
         // Basic initialization
@@ -631,7 +631,7 @@ default
 
     touch_end(integer total_number)
     {
-        state pairing; 
+        state pairing;
     }
 
     state_exit()
@@ -649,7 +649,7 @@ state pairing
 {
     state_entry()
     {
-        current_state = "pairing";
+        current_state = STATE_PAIRING;
         print_state_info();
                 
         listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
@@ -673,7 +673,7 @@ state pairing
         llOwnerSay("Pairing done.");
         print_component_info();
 
-        state setup;
+        state startup;
     }
     
     state_exit()
@@ -682,11 +682,11 @@ state pairing
     }
 }
 
-state setup
+state startup
 {
     state_entry()
     {
-        current_state = "setup";
+        current_state = STATE_STARTUP;
         print_state_info();
         
         // TODO send 'setup' message to all components
@@ -707,7 +707,7 @@ state setup
         if (all_components_setup())
         {
             llOwnerSay("Setup done. All systems ready.");
-            state ready; 
+            state running; 
         }
         else
         {
@@ -722,11 +722,11 @@ state setup
     }
 }
 
-state ready
+state running
 {
     state_entry()
     {
-        current_state = "ready";
+        current_state = STATE_RUNNING;
         print_state_info();
     }
     

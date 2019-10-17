@@ -1,21 +1,20 @@
 # Falcon Elevator
 
-This is an attempt to create a set of open source LSL scripts for 
-the operation of elevator systems in Second Life.
+This is an attempt to create a set of open source LSL scripts for the operation 
+of elevator systems in Second Life.
 
 Currently, the [Delta Elevator](https://marketplace.secondlife.com/p/delta-elevator/15062326) 
-is the most sophisticated elevator system in Second Life - by far. 
-However, its scripts are closed source. This means using the Delta 
-will introduce _no-mod_ scripts to a build, which can be an issue.
+is the most sophisticated elevator system in Second Life - by far. However, its 
+scripts are closed source. This means using the Delta will introduce _no-mod_ 
+scripts to a build, which can be an issue.
 
-The Falcon will focus on core features. It does not aim to copy the 
-full feature-set of the Delta. Also, with the target audience being 
-creators, there won't be much effort on making the setup process 
-particularly user-friendly.
+The Falcon will focus on core features. It does not aim to copy the full 
+feature-set of the Delta. Also, with the target audience being creators, there 
+won't be much effort on making the setup process particularly user-friendly.
 
-The goal is to have a solid and versatile script that enables creators 
-to come up with custom tailored elevator systems for their own builds 
-or for distribution to end-users.
+The goal is to have a solid and versatile script that enables creators to come 
+up with custom tailored elevator systems for their own builds or for 
+distribution to end-users.
 
 This is a very early work-in-progress. There isn't much to see here yet.
 
@@ -317,7 +316,7 @@ controller on the specified channel from here on out.
 #### `status`
 
     > status
-    < status component-status [status-parameter...]
+    < status component-status [status-params...]
     
 When send by the controller, this is a request for a `status` reply by 
 all applicable components; that is, all components with the same `bank`.
@@ -325,15 +324,16 @@ all applicable components; that is, all components with the same `bank`.
 If send by a component, this is a reply to a `status` or `pair` request.
 Informs about the general state of a component, which also indicates 
 whether the component is paired to a controller or not. If paired, 
-the controller UUID is provided as additionall status parameter.
+the controller UUID is provided as additional status parameter.
 
 `component-status` can be either of the following (subject to change):
 
-- `default`: only basic initialization has been done, not yet paired
-- `paired`: paired with controller, but setup not yet done
-- `setup`:  currently in the setup process
-- `ready`:  setup complete, ready for operation
-- `error`:  not operational due to some error
+- `default`: undergoing/underwent basic initialization
+- `pairing`: (controller only) pairing with components
+- `paired`:  (components only) paired with controller
+- `startup`: currently undergoing the setup process
+- `running`: setup complete, component is operational
+- `error`:   not operational due to some error
 
 
 ## Things to look out for
