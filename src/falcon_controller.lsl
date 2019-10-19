@@ -148,6 +148,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
         if (idx != NOT_FOUND)
         {
             debug("updating cab status");
+            
             // ...update its status in our bookkeeping
             cabs = llListReplaceList(cabs, [status], idx+1, idx+1);
             return TRUE;
@@ -157,6 +158,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
         if (current_state == STATE_PAIRING)
         {
             debug("adding cab to list");
+            
             // Add the shaft to our list
             string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
             add_shaft(shaft);
@@ -170,16 +172,24 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
     }
     if (sig == SIG_DOORWAY)
     {
-        // TODO: what happens if doorway isn't in list yet?
-        // Perform status update
+        // Try to find the doorway in our list of doorways
         integer idx = llListFindList(doorways, [id]);
-        if (idx != -1)
+        
+        // If we already know about the doorway...
+        if (idx != NOT_FOUND)
         {
+            debug("updating doorway status");
+            
+            // ...update its status in our bookkeeping
             doorways = llListReplaceList(doorways, [status], idx+1, idx+1);
+            return TRUE;
         }
         
-        if (status == STATE_PAIRED)
+        // If we're waiting for doorways to pair with us...
+        if (current_state == STATE_PAIRING)
         {
+            debug("adding doorway to list");
+            
             // Query doorway object's details to get its z-position
             list details = llGetObjectDetails(id, [OBJECT_POS]);
             vector pos   = llList2Vector(details, 0);
@@ -189,28 +199,42 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
             string floor = llList2String(ident_tokens, IDENT_IDX_FLOOR);
             string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
             
-            // Add the doorway to our list
-            integer success = TRUE;
+            // Add the floor to our list
             add_floor(zpos, floor);
+            
+            // Add the doorway to our list
             return add_doorway(id, floor, shaft, status);
         }
+
+        // We didn't do anything
+        return NOT_HANDLED;
     }
     if (sig == SIG_BUTTONS)
     {
-        // TODO: what happens if buttons aren't in list yet?
-        // Perform status update
+        // Try to find the buttons in our list of buttons
         integer idx = llListFindList(buttons, [id]);
-        if (idx != -1)
+        
+        // If we already know about the buttons...
+        if (idx != NOT_FOUND)
         {
+            debug("updating buttons status");
+            
+            // ...update its status in our bookkeeping
             buttons = llListReplaceList(buttons, [status], idx+1, idx+1);
         }
         
-        if (status == STATE_PAIRED)
+        // If we're waiting for buttons to pair with us...
+        if (current_state == STATE_PAIRING)
         {
+            debug("adding buttons to list");
+            
             // Add the call buttons to our list
             string floor = llList2String(ident_tokens, IDENT_IDX_FLOOR);
             return add_buttons(id, floor, status);
         }
+        
+        // We didn't do anything
+        return NOT_HANDLED;
     }
     
     // Message has not been handled after all
