@@ -332,6 +332,15 @@ Informs about the general state of a component, which also indicates
 whether the component is paired to a controller or not. If paired, 
 the controller UUID is provided as additional status parameter.
 
+`component-status` can be either of the following (subject to change):
+
+- `default`: undergoing/underwent basic initialization
+- `pairing`: (controller only) pairing with components
+- `paired`:  (components only) paired with controller
+- `config`:  undergoing the configuration process
+- `running`: config complete, component is operational
+- `error`:   not operational due to some error
+
 #### `config`
 
 	> config [config-params...]
@@ -341,14 +350,13 @@ Instruct components to undergo configuration. Depending on the component, the
 existing floors, so that button panels in the cab as well as on the floors can 
 be set up accordingly.
 
-`component-status` can be either of the following (subject to change):
+#### `event`
 
-- `default`: undergoing/underwent basic initialization
-- `pairing`: (controller only) pairing with components
-- `paired`:  (components only) paired with controller
-- `config`:  undergoing the configuration process
-- `running`: config complete, component is operational
-- `error`:   not operational due to some error
+	< event event-name [event-details...]
+	
+Informs the controller about an event. An event could be when an avatar has 
+clicked on one of the floor buttons, when an elevator cab has arrived at its 
+destination, when a doorways doors have finished opening or closing, etc.
 
 
 ## Things to look out for
