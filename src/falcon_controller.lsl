@@ -114,9 +114,9 @@ integer handle_cmd_pong(key id, string sig, string ident, list params)
 
 integer handle_cmd_status(key id, string sig, string ident, list params)
 {
-    // Get the object's owner, abort if it doesn't match ours
+    // Get the object's owner and position; abort if owner doesn't match ours
     // as we aren't interested in other people's component's status
-    list details = llGetObjectDetails(id, [OBJECT_OWNER]);
+    list details = llGetObjectDetails(id, [OBJECT_OWNER, OBJECT_POS]);
     if (owner != llList2Key(details, 0))
     {
         return NOT_HANDLED;
@@ -190,9 +190,8 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
         {
             debug("adding doorway to list");
             
-            // Query doorway object's details to get its z-position
-            list details = llGetObjectDetails(id, [OBJECT_POS]);
-            vector pos   = llList2Vector(details, 0);
+            // Get dooway's z-position
+            vector pos   = llList2Vector(details, 1);
             float zpos   = round(pos.z, 2);
             
             // Parse floor and shaft name from doorway's ident string
