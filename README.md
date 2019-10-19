@@ -301,6 +301,12 @@ Broadcast message to scan the sim for components. Matching components
 A component's reply to a controller's `ping` message, given that their 
 `bank` names are a match.
 
+#### `reset`
+
+	> reset
+	
+Instruct the component to perform a complete script reset.
+
 #### `channel`
 
 	> channel [channel]
