@@ -8,7 +8,7 @@
 string SIGNATURE = SIG_CONTROLLER;
 
 float PAIRING_TIME = 3.0;
-float SETUP_TIME   = 6.0;
+float CONFIG_TIME  = 6.0;
 
 ////////////////////////////////////////////////////////////////////////////////
 ////  OTHER SCRIPT STATE GLOBALS                                            ////
@@ -747,7 +747,7 @@ state config
         request_doorway_setup();
         request_cab_setup();
         
-        llSetTimerEvent(SETUP_TIME);
+        llSetTimerEvent(CONFIG_TIME);
     }
     
     listen(integer channel, string name, key id, string message)
