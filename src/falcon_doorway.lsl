@@ -2,7 +2,7 @@
 ////  CONSTANTS                                                             ////
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "falcon_constants.lsl"
+#include "falcon_common_constants.lsl"
 string SIGNATURE = SIG_DOORWAY;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -22,7 +22,7 @@ string  current_state;
 ////  UTILITY FUNCTIONS                                                     ////
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "falcon_common.lsl"
+#include "falcon_common_functions.lsl"
 
 /*
  * Compares the element at position `idx` from the given identifier string
@@ -72,19 +72,19 @@ integer process_message(integer chan, string name, key id, string msg)
     }
     
     // Hand over to the appropriate command handler
-    if (cmd == "ping")
+    if (cmd == CMD_PING)
     {
         return handle_cmd_ping(id, sig, ident);
     }
-    if (cmd == "status")
+    if (cmd == CMD_STATUS)
     {
         return handle_cmd_status(id, sig, ident);
     }
-    if (cmd == "pair")
+    if (cmd == CMD_PAIR)
     {
         return handle_cmd_pair(id, sig, ident);
     }
-    if (cmd == "setup")
+    if (cmd == CMD_CONFIG)
     {
         return handle_cmd_setup(id, sig, ident);
     }
@@ -95,7 +95,7 @@ integer process_message(integer chan, string name, key id, string msg)
 
 integer handle_cmd_ping(key id, string sig, string ident)
 {
-    send_message(id, "pong", []);
+    send_message(id, CMD_PONG, []);
     return TRUE;
 }
 
@@ -107,7 +107,7 @@ integer handle_cmd_status(key id, string sig, string ident)
         return NOT_HANDLED;
     }
     
-    send_message(id, "status", [current_state, controller]);
+    send_message(id, CMD_STATUS, [current_state, controller]);
     return TRUE;
 }
 
@@ -122,7 +122,7 @@ integer handle_cmd_pair(key id, string sig, string ident)
     // We were already paired, just let the controller know
     if (controller == id)
     {
-        send_message(id, "status", [current_state, controller]);
+        send_message(id, CMD_STATUS, [current_state, controller]);
         return TRUE;
     }
     
@@ -203,7 +203,7 @@ state paired
         print_state_info();
         
         // We inform the controller of our status change
-        send_message(controller, "status", [current_state, controller]);
+        send_message(controller, CMD_STATUS, [current_state, controller]);
         
         // We could only listen for messages by the controller as we now know 
         // its UUID; however, that could get us stuck if the controller UUID 
@@ -232,16 +232,22 @@ state startup
 {
     state_entry()
     {
-        current_state = STATE_STARTUP;
+        current_state = STATE_CONFIG;
         print_state_info();
         
         // We inform the controller of our status change
-        send_message(controller, "status", [current_state]);
+        send_message(controller, CMD_STATUS, [current_state]);
+        
+        // TODO: initiate setup of subcomponents!
+        //       then switch to ready state once done,
+        //       or error state in case shit went south.
+        state running;
     }
 
     listen(integer channel, string name, key id, string message)
     {
         integer result = process_message(channel, name, id, message);
+        
     }
 
     state_exit()
@@ -262,7 +268,7 @@ state running
         print_state_info();
         
         // We inform the controller of our status change
-        send_message(controller, "status", [current_state]);
+        send_message(controller, CMD_STATUS, [current_state]);
     }
 
     listen(integer channel, string name, key id, string message)
@@ -285,11 +291,11 @@ state error
 {
     state_entry()
     {
-        current_state = STATE_RUNNING;
+        current_state = STATE_ERROR;
         print_state_info();
         
         // We inform the controller of our status change
-        send_message(controller, "status", [current_state]);
+        send_message(controller, CMD_STATUS, [current_state]);
     }
      
     state_exit()

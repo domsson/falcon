@@ -303,6 +303,12 @@ which for the controller is simply the `bank` name.
 A component's reply to a controller's `ping` message, given that their 
 `bank` names are a match.
 
+#### `channel`
+
+	> channel [channel]
+	
+Instruct a component to switch to the given channel from here on out.
+
 #### `pair`
 
     > pair [channel]
@@ -326,13 +332,22 @@ Informs about the general state of a component, which also indicates
 whether the component is paired to a controller or not. If paired, 
 the controller UUID is provided as additional status parameter.
 
+#### `config`
+
+	> config [config-params...]
+
+Instruct components to undergo configuration. Depending on the component, the 
+`config-params` can differ, but will typically include information about the 
+existing floors, so that button panels in the cab as well as on the floors can 
+be set up accordingly.
+
 `component-status` can be either of the following (subject to change):
 
 - `default`: undergoing/underwent basic initialization
 - `pairing`: (controller only) pairing with components
 - `paired`:  (components only) paired with controller
-- `startup`: currently undergoing the setup process
-- `running`: setup complete, component is operational
+- `config`:  undergoing the configuration process
+- `running`: config complete, component is operational
 - `error`:   not operational due to some error
 
 
