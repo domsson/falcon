@@ -84,7 +84,7 @@ integer process_message(integer chan, string name, key id, string msg)
     {
         return handle_cmd_pair(id, sig, ident);
     }
-    if (cmd == CMD_SETUP)
+    if (cmd == CMD_CONFIG)
     {
         return handle_cmd_setup(id, sig, ident);
     }
@@ -235,7 +235,7 @@ state startup
 {
     state_entry()
     {
-        current_state = STATE_STARTUP;
+        current_state = STATE_CONFIG;
         print_state_info();
         
         // We inform the controller of our status change

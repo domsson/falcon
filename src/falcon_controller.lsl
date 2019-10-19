@@ -3,6 +3,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "falcon_common_constants.lsl"
+#include "falcon_controller_constants.lsl"
+
 string SIGNATURE = SIG_CONTROLLER;
 
 float PAIRING_TIME = 3.0;
@@ -20,56 +22,29 @@ key owner = NULL_KEY;
 integer listen_handle;
 string  current_state;
 
-
 ////////////////////////////////////////////////////////////////////////////////
 ////  MAIN DATA STRUCTURES                                                  ////
 ////////////////////////////////////////////////////////////////////////////////
 
 // List of all `cab` objects operating in this bank
 // [string shaft, key uuid, string state, ...]
-list    cabs;
-integer CABS_STRIDE = 3;
-
-integer CABS_IDX_SHAFT = 0;
-integer CABS_IDX_UUID  = 1;
-integer CABS_IDX_STATE = 2;
+list cabs;
 
 // List of all `doorway` objects for this bank
 // [string floor, string shaft, key uuid, string state, ...]
-list    doorways;
-integer DOORWAYS_STRIDE = 4;
-
-integer DOORWAYS_IDX_FLOOR = 0;
-integer DOORWAYS_IDX_SHAFT = 1;
-integer DOORWAYS_IDX_UUID  = 2;
-integer DOORWAYS_IDX_STATE = 3;
+list doorways;
 
 // List of all `call_buttons` objects for this bank
 // [string floor, key uuid, string state ...]
-list    buttons;
-integer BUTTONS_STRIDE = 3;
-
-integer BUTTONS_IDX_FLOOR = 0;
-integer BUTTONS_IDX_UUID  = 1;
-integer BUTTONS_IDX_STATE = 2;
+list buttons;
 
 // List of all elevator shafts in this bank
 // [string name, float doorway_offset, string recall_floor...]
-list    shafts;
-integer SHAFTS_STRIDE = 3;
+list shafts;
 
-integer SHAFTS_IDX_NAME          = 0;
-integer SHAFTS_IDX_DOORWAY_DIST  = 1;
-integer SHAFTS_IDX_RECALL_FLOOR  = 2;
-
-// List of all floors
-// Order important: lowest floor (zpos) first!
+// List of all floors (order important: lowest floor first!)
 // [float zpos, string name, ...]
-list    floors;
-integer FLOORS_STRIDE = 2;
-
-integer FLOORS_IDX_ZPOS = 0;
-integer FLOORS_IDX_NAME = 1;
+list floors;
 
 ////////////////////////////////////////////////////////////////////////////////
 ////  UTILITY FUNCTIONS                                                     ////
@@ -564,7 +539,7 @@ integer request_doorway_setup()
             list params = [pos, rot, floor_info, rc_floor_num, floor_num];
             
             // Finally, we can send the setup message to the doorway
-            send_message(dw_uuid, CMD_SETUP, params);
+            send_message(dw_uuid, CMD_CONFIG, params);
             ++num_doorways_messaged;
             
             // Label for skipping an interation of this loop
@@ -689,7 +664,7 @@ state startup
 {
     state_entry()
     {
-        current_state = STATE_STARTUP;
+        current_state = STATE_CONFIG;
         print_state_info();
         
         // TODO send 'setup' message to all components

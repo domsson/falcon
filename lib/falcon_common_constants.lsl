@@ -24,13 +24,15 @@
 #define STATE_INITIAL "default"
 #define STATE_PAIRING "pairing"
 #define STATE_PAIRED  "paired"
-#define STATE_STARTUP "startup"
+#define STATE_CONFIG  "config"
 #define STATE_RUNNING "running"
 #define STATE_ERROR   "error"
 
-#define CMD_PING   "ping"
-#define CMD_PONG   "pong"
-#define CMD_PAIR   "pair"
-#define CMD_STATUS "status"
-#define CMD_SETUP  "setup"
+#define CMD_PING    "ping"
+#define CMD_PONG    "pong"
+#define CMD_PAIR    "pair"
+#define CMD_STATUS  "status"
+#define CMD_CONFIG  "config"
+#define CMD_CHANNEL "channel"
+
 
