@@ -293,8 +293,6 @@ components, `<` is a message from a component to the controller.
     
 Broadcast message to scan the sim for components. Matching components 
 (those with the same `bank` name) should reply to the sender via `pong`. 
-The `ident-string` is the string originally taken from the description, 
-which for the controller is simply the `bank` name.
 
 #### `pong`
 
@@ -307,38 +305,37 @@ A component's reply to a controller's `ping` message, given that their
 
 	> channel [channel]
 	
-Instruct a component to switch to the given channel from here on out.
+Instruct a component to switch to the given channel for all communication from 
+this point forward.
 
 #### `pair`
 
-    > pair [channel]
+    > pair [force] [channel]
     
-Broadcast or direct message from controller to components, requesting 
-them to pair up with the controller if the `bank` name is a match. 
-Components are expected to reply with a `status` message. If the optional 
-`channel` parameter is given, components should listen to messages from the 
-controller on the specified channel from here on out.
+Request a component to pair up with the controller if the `bank` name matches. 
+Components are expected to reply with a `status` message. If the `force` 
+parameter is given and `1`, components should pair to the controller even if 
+they were already paired to another controller. If the `channel` parameter is 
+given, components should additionally change to the specified channel.
 
 #### `status`
 
     > status
-    < status component-status [status-params...]
+    < status component-status controller-uuid [status-params...]
     
 When send by the controller, this is a request for a `status` reply by 
 all applicable components; that is, all components with the same `bank`.
 
 If send by a component, this is a reply to a `status` or `pair` request.
-Informs about the general state of a component, which also indicates 
-whether the component is paired to a controller or not. If paired, 
-the controller UUID is provided as additional status parameter.
+Informs about the general state of a component, which also indicates whether the 
+component is paired to a controller or not. If paired, the controller UUID is 
+provided, otherwise it will be the NULL key.
 
 `component-status` can be either of the following (subject to change):
 
-- `default`: undergoing/underwent basic initialization
-- `pairing`: (controller only) pairing with components
-- `paired`:  (components only) paired with controller
-- `config`:  undergoing the configuration process
-- `running`: config complete, component is operational
+- `default`: initial state; only basic initialization has been done
+- `config`:  currently undergoing the configuration process
+- `running`: configuration complete, component is operational
 - `error`:   not operational due to some error
 
 #### `config`
@@ -356,7 +353,7 @@ be set up accordingly.
 	
 Informs the controller about an event. An event could be when an avatar has 
 clicked on one of the floor buttons, when an elevator cab has arrived at its 
-destination, when a doorways doors have finished opening or closing, etc.
+destination, when a doorway's doors have finished opening/ closing, etc.
 
 
 ## Things to look out for
