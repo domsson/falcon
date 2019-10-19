@@ -2,7 +2,7 @@
 ////  CONSTANTS                                                             ////
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "falcon_constants.lsl"
+#include "falcon_common_constants.lsl"
 string SIGNATURE = SIG_CONTROLLER;
 
 float PAIRING_TIME = 3.0;
@@ -75,7 +75,7 @@ integer FLOORS_IDX_NAME = 1;
 ////  UTILITY FUNCTIONS                                                     ////
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "falcon_common.lsl"
+#include "falcon_common_functions.lsl"
 
 print_component_info()
 {
@@ -117,11 +117,11 @@ integer process_message(integer chan, string name, key id, string msg)
     list   params = llList2List(tokens,   MSG_IDX_PARAMS, num_tokens - 1);
     
     // Hand over to the appropriate command handler
-    if (cmd == "pong")
+    if (cmd == CMD_PONG)
     {
         return handle_cmd_pong(id, sig, ident, params);
     }
-    if (cmd == "status")
+    if (cmd == CMD_STATUS)
     {
         return handle_cmd_status(id, sig, ident, params);
     }
@@ -147,6 +147,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
     // Handle based on type of object
     if (sig == SIG_CAB)
     {
+        // TODO: what happens if cab isn't in list yet?
         // Perform status update
         integer idx = llListFindList(cabs, [id]);
         cabs = llListReplaceList(cabs, [status], idx+1, idx+1);
@@ -161,6 +162,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
     }
     if (sig == SIG_DOORWAY)
     {
+        // TODO: what happens if doorway isn't in list yet?
         // Perform status update
         integer idx = llListFindList(doorways, [id]);
         doorways = llListReplaceList(doorways, [status], idx+1, idx+1);
@@ -184,6 +186,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
     }
     if (sig == SIG_BUTTONS)
     {
+        // TODO: what happens if buttons aren't in list yet?
         // Perform status update
         integer idx = llListFindList(buttons, [id]);
         buttons = llListReplaceList(buttons, [status], idx+1, idx+1);
@@ -561,7 +564,7 @@ integer request_doorway_setup()
             list params = [pos, rot, floor_info, rc_floor_num, floor_num];
             
             // Finally, we can send the setup message to the doorway
-            send_message(dw_uuid, "setup", params);
+            send_message(dw_uuid, CMD_SETUP, params);
             ++num_doorways_messaged;
             
             // Label for skipping an interation of this loop
@@ -654,7 +657,7 @@ state pairing
                 
         listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
 
-        send_broadcast("pair", []);
+        send_broadcast(CMD_PAIR, []);
         llSetTimerEvent(PAIRING_TIME);
     }
     

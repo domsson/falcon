@@ -27,3 +27,10 @@
 #define STATE_STARTUP "startup"
 #define STATE_RUNNING "running"
 #define STATE_ERROR   "error"
+
+#define CMD_PING   "ping"
+#define CMD_PONG   "pong"
+#define CMD_PAIR   "pair"
+#define CMD_STATUS "status"
+#define CMD_SETUP  "setup"
+
