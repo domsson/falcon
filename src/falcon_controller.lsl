@@ -21,6 +21,7 @@ key owner = NULL_KEY;
 // state etc
 integer listen_handle;
 string  current_state;
+string  next_state;
 
 ////////////////////////////////////////////////////////////////////////////////
 ////  MAIN DATA STRUCTURES                                                  ////
@@ -113,6 +114,24 @@ integer handle_cmd_pong(key id, string sig, string ident, list params)
 
 integer handle_cmd_status(key id, string sig, string ident, list params)
 {
+    // Get the object's owner, abort if it doesn't match ours
+    // as we aren't interested in other people's component's status
+    list details = llGetObjectDetails(id, [OBJECT_OWNER]);
+    if (owner != llList2Key(details, 0))
+    {
+        return NOT_HANDLED;
+    }
+    
+    /*
+    key controller = llList2Key(params, 1);
+        
+    // We don't care if the component isn't paired to us
+    if (controller != uuid)
+    {
+        return NOT_HANDLED;
+    }
+    */
+    
     // Parse the object's ident string into a list
     list ident_tokens = parse_ident(ident, ":");
     
@@ -122,25 +141,42 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
     // Handle based on type of object
     if (sig == SIG_CAB)
     {
-        // TODO: what happens if cab isn't in list yet?
-        // Perform status update
+        // Try to find the cab in our list of cabs
         integer idx = llListFindList(cabs, [id]);
-        cabs = llListReplaceList(cabs, [status], idx+1, idx+1);
-        
-        if (status == STATE_PAIRED)
+
+        // If we already know about the cab...
+        if (idx != NOT_FOUND)
         {
-            // Add the cab to our list
+            debug("updating cab status");
+            // ...update its status in our bookkeeping
+            cabs = llListReplaceList(cabs, [status], idx+1, idx+1);
+            return TRUE;
+        }
+        
+        // If we're waiting for cabs to pair with us...
+        if (current_state == STATE_PAIRING)
+        {
+            debug("adding cab to list");
+            // Add the shaft to our list
             string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
             add_shaft(shaft);
+                
+            // Add the cab to our list and return success or failure
             return add_cab(id, shaft, status);
         }
+        
+        // We didn't do anything
+        return NOT_HANDLED;
     }
     if (sig == SIG_DOORWAY)
     {
         // TODO: what happens if doorway isn't in list yet?
         // Perform status update
         integer idx = llListFindList(doorways, [id]);
-        doorways = llListReplaceList(doorways, [status], idx+1, idx+1);
+        if (idx != -1)
+        {
+            doorways = llListReplaceList(doorways, [status], idx+1, idx+1);
+        }
         
         if (status == STATE_PAIRED)
         {
@@ -164,7 +200,10 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
         // TODO: what happens if buttons aren't in list yet?
         // Perform status update
         integer idx = llListFindList(buttons, [id]);
-        buttons = llListReplaceList(buttons, [status], idx+1, idx+1);
+        if (idx != -1)
+        {
+            buttons = llListReplaceList(buttons, [status], idx+1, idx+1);
+        }
         
         if (status == STATE_PAIRED)
         {
@@ -552,6 +591,16 @@ integer request_doorway_setup()
 integer request_cab_setup()
 {
     // TODO
+    integer num_cabs = get_strided_length(cabs, CABS_STRIDE);
+    integer c;
+    
+    for (c = 0; c < num_cabs; ++c)
+    {
+        key uuid = llList2Key(cabs, c * CABS_STRIDE + CABS_IDX_UUID);
+        // TODO params are missing from the message!
+        send_message(uuid, CMD_CONFIG, []);
+    }
+    
     return FALSE;
 }
 
@@ -564,6 +613,7 @@ integer all_components_setup()
     {
         integer idx = c * CABS_STRIDE + CABS_IDX_STATE;
         string status = llList2String(cabs, idx);
+        debug("Cab status: " + status);
         if (status != STATE_RUNNING)
         {
             return FALSE;
@@ -577,6 +627,7 @@ integer all_components_setup()
     {
         integer idx = d * DOORWAYS_STRIDE + DOORWAYS_IDX_STATE;
         string status = llList2String(doorways, idx);
+        debug("Doorway status: " + status);
         if (status != STATE_RUNNING)
         {
             return FALSE;
@@ -651,7 +702,7 @@ state pairing
         llOwnerSay("Pairing done.");
         print_component_info();
 
-        state startup;
+        state config;
     }
     
     state_exit()
@@ -660,12 +711,14 @@ state pairing
     }
 }
 
-state startup
+state config
 {
     state_entry()
     {
         current_state = STATE_CONFIG;
         print_state_info();
+        
+        listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
         
         // TODO send 'setup' message to all components
         request_doorway_setup();
@@ -684,12 +737,12 @@ state startup
         llSetTimerEvent(0.0);
         if (all_components_setup())
         {
-            llOwnerSay("Setup done. All systems ready.");
+            llOwnerSay("Config done. All systems ready.");
             state running; 
         }
         else
         {
-            llOwnerSay("Setup failed.");
+            llOwnerSay("Config failed.");
             llResetScript();
         }
     }
@@ -706,6 +759,8 @@ state running
     {
         current_state = STATE_RUNNING;
         print_state_info();
+        
+        listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
     }
     
     listen(integer channel, string name, key id, string message)

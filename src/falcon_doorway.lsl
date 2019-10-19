@@ -17,6 +17,7 @@ key controller = NULL_KEY;
 // state etc
 integer listen_handle;
 string  current_state;
+string  next_state;
 
 ////////////////////////////////////////////////////////////////////////////////
 ////  UTILITY FUNCTIONS                                                     ////
@@ -48,12 +49,14 @@ integer ident_matches(string ident, integer idx)
 integer process_message(integer chan, string name, key id, string msg)
 {
 
+    /*
     // Get the sender's owner and abort if they don't match with ours
     list details = llGetObjectDetails(id, [OBJECT_OWNER]);
     if (owner != llList2Key(details, 0))
     {
         return NOT_HANDLED;
     }
+    */
     
     // Split the message on spaces
     list    tokens     = llParseString2List(msg, [" "], []);
@@ -107,6 +110,7 @@ integer handle_cmd_status(key id, string sig, string ident)
         return NOT_HANDLED;
     }
     
+    // Send back status info, even to foreign controllers
     send_message(id, CMD_STATUS, [current_state, controller]);
     return TRUE;
 }
@@ -119,15 +123,9 @@ integer handle_cmd_pair(key id, string sig, string ident)
         return NOT_HANDLED;
     }
 
-    // We were already paired, just let the controller know
-    if (controller == id)
-    {
-        send_message(id, CMD_STATUS, [current_state, controller]);
-        return TRUE;
-    }
-    
-    // We weren't paired yet, let's do it now
-    set_controller(id);
+    // Set/update the controller and send back a status message
+    controller = id;
+    send_message(id, CMD_STATUS, [current_state, controller]);
     return TRUE;
 }
 
@@ -139,16 +137,15 @@ integer handle_cmd_setup(key id, string sig, string ident)
         return NOT_HANDLED;
     }
     
-    return NEXT_STATE;
-}
-
-
-/*
- * Sets the global variable `controller` to the UUID supplied in `id`.
- */
-set_controller(key id)
-{
-    controller = id;
+    // Abort if the controller doesn't match
+    if (id != controller)
+    {
+        return NOT_HANDLED;
+    }
+    
+    // Request change to config state
+    next_state = STATE_CONFIG;
+    return TRUE;
 }
 
 integer init()
@@ -166,10 +163,10 @@ default
         current_state = STATE_INITIAL;
         print_state_info();
         
-        // Perform basic initialization
+        // Perform basic initialization first
         init();
         
-        // We're waiting for a `ping`, `pair` or `status` by the controller
+        // Listen to messages
         listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
     }
     
@@ -177,10 +174,13 @@ default
     {
         integer result = process_message(channel, name, id, message);
     
-        // Check if we've been paired and change state if so
-        if (controller != NULL_KEY)
+        if (next_state == STATE_CONFIG)
         {
-            state paired;
+            state config;
+        }
+        if (next_state == STATE_ERROR)
+        {
+            state error;
         }
     }
     
@@ -190,64 +190,40 @@ default
     }
 }
 
-/*
- * We've been paired with a controller. In this state, we're waiting for setup
- * instructions by the controller. We're also listening to `ping` and similar 
- * messages, of course.
- */
-state paired
-{
-    state_entry()
-    {
-        current_state = STATE_PAIRED;
-        print_state_info();
-        
-        // We inform the controller of our status change
-        send_message(controller, CMD_STATUS, [current_state, controller]);
-        
-        // We could only listen for messages by the controller as we now know 
-        // its UUID; however, that could get us stuck if the controller UUID 
-        // ever changes and we need to re-pair with a new controller
-        listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
-    }
-    
-    listen(integer channel, string name, key id, string message)
-    {
-        integer result = process_message(channel, name, id, message);
-        
-        // Check if a message handler has requested a switch to the next state
-        if (result == NEXT_STATE)
-        {
-            state startup;
-        }
-    }
-    
-    state_exit()
-    {
-        // Nothing yet
-    }
-}
-
-state startup
+state config
 {
     state_entry()
     {
         current_state = STATE_CONFIG;
         print_state_info();
         
+        // Listen to messages
+        listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
+        
         // We inform the controller of our status change
-        send_message(controller, CMD_STATUS, [current_state]);
+        send_message(controller, CMD_STATUS, [current_state, controller]);
         
         // TODO: initiate setup of subcomponents!
         //       then switch to ready state once done,
         //       or error state in case shit went south.
-        state running;
     }
 
     listen(integer channel, string name, key id, string message)
     {
         integer result = process_message(channel, name, id, message);
         
+        if (next_state == STATE_INITIAL)
+        {
+            state default;
+        }
+        if (next_state == STATE_RUNNING)
+        {
+            state running;
+        }
+        if (next_state == STATE_ERROR)
+        {
+            state error;
+        }
     }
 
     state_exit()
@@ -267,13 +243,29 @@ state running
         current_state = STATE_RUNNING;
         print_state_info();
         
+        // Listen to messages
+        listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
+        
         // We inform the controller of our status change
-        send_message(controller, CMD_STATUS, [current_state]);
+        send_message(controller, CMD_STATUS, [current_state, controller]);
     }
 
     listen(integer channel, string name, key id, string message)
     {
         integer result = process_message(channel, name, id, message);
+        
+        if (next_state == STATE_INITIAL)
+        {
+            state default;
+        }
+        if (next_state == STATE_CONFIG)
+        {
+            state config;
+        }
+        if (next_state == STATE_ERROR)
+        {
+            state error;
+        }
     }
      
     state_exit()
@@ -294,8 +286,29 @@ state error
         current_state = STATE_ERROR;
         print_state_info();
         
+        // Listen to messages
+        listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
+        
         // We inform the controller of our status change
-        send_message(controller, CMD_STATUS, [current_state]);
+        send_message(controller, CMD_STATUS, [current_state, controller]);
+    }
+    
+    listen(integer channel, string name, key id, string message)
+    {
+        integer result = process_message(channel, name, id, message);
+        
+        if (next_state == STATE_INITIAL)
+        {
+            state default;
+        }
+        if (next_state == STATE_CONFIG)
+        {
+            state config;
+        }
+        if (next_state == STATE_RUNNING)
+        {
+            state running;
+        }
     }
      
     state_exit()
