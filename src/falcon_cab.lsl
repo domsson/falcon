@@ -123,7 +123,14 @@ integer handle_cmd_pair(key id, string sig, string ident, list params)
         return NOT_HANDLED;
     }
 
-    // Set/update the controller and send back a status message
+    // If we were paired before, but now switch to a new controller...
+    if (controller != NULL_KEY && controller != id)
+    {
+        // ...let's first inform the old controller about it
+        send_message(controller, CMD_STATUS, [current_state, id]);
+    }
+    
+    // Set/update the controller and inform the new controller
     controller = id;
     send_message(id, CMD_STATUS, [current_state, controller]);
     return TRUE;

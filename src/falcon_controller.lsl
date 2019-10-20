@@ -146,9 +146,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
 
         // If we already know about the cab...
         if (idx != NOT_FOUND)
-        {
-            debug("updating cab status");
-            
+        {            
             // ...update its status in our bookkeeping
             cabs = llListReplaceList(cabs, [status], idx+1, idx+1);
             return TRUE;
@@ -156,9 +154,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
         
         // If we're waiting for cabs to pair with us...
         if (current_state == STATE_PAIRING)
-        {
-            debug("adding cab to list");
-            
+        {            
             // Add the shaft to our list
             string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
             add_shaft(shaft);
@@ -177,9 +173,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
         
         // If we already know about the doorway...
         if (idx != NOT_FOUND)
-        {
-            debug("updating doorway status");
-            
+        {            
             // ...update its status in our bookkeeping
             doorways = llListReplaceList(doorways, [status], idx+1, idx+1);
             return TRUE;
@@ -187,9 +181,7 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
         
         // If we're waiting for doorways to pair with us...
         if (current_state == STATE_PAIRING)
-        {
-            debug("adding doorway to list");
-            
+        {            
             // Get dooway's z-position
             vector pos   = llList2Vector(details, 1);
             float zpos   = round(pos.z, 2);
@@ -216,17 +208,13 @@ integer handle_cmd_status(key id, string sig, string ident, list params)
         // If we already know about the buttons...
         if (idx != NOT_FOUND)
         {
-            debug("updating buttons status");
-            
             // ...update its status in our bookkeeping
             buttons = llListReplaceList(buttons, [status], idx+1, idx+1);
         }
         
         // If we're waiting for buttons to pair with us...
         if (current_state == STATE_PAIRING)
-        {
-            debug("adding buttons to list");
-            
+        {            
             // Add the call buttons to our list
             string floor = llList2String(ident_tokens, IDENT_IDX_FLOOR);
             return add_buttons(id, floor, status);
