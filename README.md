@@ -122,57 +122,46 @@ out there; one for each of these cases. For now, one will have to do.
     if so, they message the `controller` back with a `status` message, 
     specifying their `shaft` and `floor` name, if applicable
 5.  **Remember components**  
-    The `controller` creates and maintains a list of all components that 
-    reported back
+    The `controller` creates and maintains lists of all paired components
 6.  **Sanity check** _optional_  
     The `controller` checks if all required components are in place; 
     that is, at least one `cab` and at least two `doorway` objects for 
     each `cab`; `call_buttons` are seen as optional as they might be 
     implemented as a subcomponent of the `doorway` objects
-7.  **Read config**  _optional_  
-    The `controller` reads its configuration notecard and parses all 
-    relevant information; amongst that information can optionally be a 
-    list of floor numbers/names (one to two digits)
-8.  **Find base doorway**  
+7.  **Find base doorway**  
     The `controller` queries the location and rotation of the _base_ 
     `doorway` (the one closests in z-position to the associated `cab`);
     this will also determine the recall floor for the `shaft` of that 
     `doorway`, as well as the z-offset between `cab` and `doorway`s
 
-#### Setup
+#### Configuration
     
-1.  **Request doorway setup**  
+1.  **Request doorway config**  
     The `controller` sends a message to all `doorway`s, instructing them 
-    to perform setup; this message includes the x- and y-position and 
+    to perform configuration; this message includes the x- and y-position and 
     rotation as queried from the _base_ doorway, as well as their custom 
     floor number/name, if any; additionally, it includes a list of all 
     `floor`s and their accessibility (this is important so that the 
-    `doorway`s can setup linked `call_buttons` correctly, if any)
-2.  **Peform doorway setup**  
-    All `doorway`s undergo setup and report failure or success back to 
+    `doorway`s can configure linked `call_buttons` correctly, if any)
+2.  **Peform doorway config**  
+    All `doorway`s undergo configuration, then send a `status` message back to 
     the `controller`
-3.  **Request cab setup**  
+3.  **Request cab config**  
     The `controller` sends a message to all `cab`s, instructing them to 
-    perform setup; this message includes a list of all `floor`s, 
-    including their z-position, as well as their custom floor names, 
-    if any, and whether each `floor` is actually accessible by that 
-    particular `cab` (some floors might not be accessible by all the 
-    `cab`s in a `bank`)
-4.  **Perform cab setup**  
-    All `cab`s perform setup, including setting up their subcomponents; 
-    the `cab`s then send a message back to the `controller`, 
-    specifying if setup was successfull or failed
-5.  **Request button setup**  
+    perform configuration; the message includes a list of all `floor`s, 
+	including their custom floor names and accessibility by that `cab`
+4.  **Perform cab config**  
+    All `cab`s perform configuration, including setting up their subcomponents; 
+    the `cab`s then send a `status` message back to the `controller`
+5.  **Request button config**  
     The `controller` sends a message to all `call_buttons` (if any), 
-    instructing them to perform setup; the message contains a list of 
-    all `floor`s and their accessibility (this is important so that the 
-    buttons can be set up correctly, i.e. show only an up-arrow button 
-    if there are no floors below etc)
-6.  **Perform button setup**  
-    All `call_buttons`, if any, perform setup and report back to the 
-    `controller` accordingly
+    instructing them to perform configuration; the message contains a list of 
+    all `floor`s, including their custom names
+6.  **Perform button config**  
+    All `call_buttons`, if any, perform configuration and report back to the 
+    `controller` with a `status` message
 7.  **Inform about success**  
-    If all components were setup successfully, the `controller` sends 
+    If all components were configured successfully, the `controller` sends 
     out messages to all registered components, informing them that the 
     system is ready
 8.  **Finish up** _optional_   
