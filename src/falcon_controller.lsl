@@ -433,8 +433,8 @@ integer set_shaft_details(string shaft, float dw_offset, string base_floor)
 }
 
 /*
- * Find the closest doorway to each cab (on the z-axis), then updates the shafts 
- * list with that information, effectively inserting the base/recall doorways.
+ * Finds the closest doorway to each cab (on z), then update the shafts list 
+ * with that information, effectively inserting the base/recall doorways.
  * Returns TRUE on success, FALSE if none or not all entries could be updated.
  */
 integer init_recall_floors()
@@ -446,8 +446,8 @@ integer init_recall_floors()
     for (i = 0; i < num_cabs; ++i)
     {
         // Get the cab's UUID and the name of its shaft
-        key    cab_uuid  = llList2Key(cabs,    i * CABS_STRIDE + CABS_IDX_UUID);
-        string cab_shaft = llList2String(cabs, i * CABS_STRIDE + CABS_IDX_SHAFT);
+        key    cab_uuid  = llList2Key(cabs,    i*CABS_STRIDE + CABS_IDX_UUID);
+        string cab_shaft = llList2String(cabs, i*CABS_STRIDE + CABS_IDX_SHAFT);
         
         // Query the position of the cab so we can get its z-position
         list   details = llGetObjectDetails(cab_uuid, [OBJECT_POS]);
@@ -511,22 +511,25 @@ list get_floor_info(string shaft)
 }
 
 /*
- * Gathers all the information that the doorways need to perform setup, then 
- * sends a setup request message with all that information to the doorways.
- * Returns the number of doorways that were messaged.
+ * Gathers all the information that the componetns need to perform config, then 
+ * sends a config request message with all that information to the components.
+ * Returns the number of components that were messaged.
  *
  * TODO: Add error handling
- * TODO: Maybe split this into two functions
  */
-integer request_doorway_setup()
+integer request_component_setup()
 {
-    integer num_doorways_messaged = 0;
+    integer num_components_messaged = 0;
+    string floor_info = "";
     
     integer num_shafts = get_strided_length(shafts, SHAFTS_STRIDE);
     integer s;
     
     integer num_doorways = get_strided_length(doorways, DOORWAYS_STRIDE);
     integer d;
+    
+    integer num_cabs = get_strided_length(cabs, CABS_STRIDE);
+    integer c;
     
     for (s = 0; s < num_shafts; ++s)
     {
@@ -562,72 +565,113 @@ integer request_doorway_setup()
                            (string) base_dw_rot.s + ">";
         
         // Construct the floor info string
-        string floor_info = llDumpList2String(get_floor_info(shaft), ",");
+        floor_info = llDumpList2String(get_floor_info(shaft), ",");
         
+        // The params list contains information for the component's config
+        // process; some of that information is the same for all components.
+        // Common information will be at the beginning of the params list.
+        // Specific information, which is only relevant for select components, 
+        // will be placed at the end of the params list.
+        
+        // COMMON --------------------------------------------------------------
+        // floor_info:   list of all floors (names and accessibility)
+        // floor_num:    index of current floor (could be same as rc_floor_num)
+        // rc_floor_num: index of recall floor (could be same as floor_num) 
+        // DOORWAYS ONLY -------------------------------------------------------
+        // pos:          position of reference doorway
+        // rot:          rotation of reference doorway
+
+        // Iterate doorways, message those with a matching shaft name
         for (d = 0; d < num_doorways; ++d)
         {
-            // doorways: [string floor, string shaft, key uuid, ...]
-            // floors:   [float z-pos, string name, ...]
-            
             integer dw_shaft_idx = d * DOORWAYS_STRIDE + DOORWAYS_IDX_SHAFT;
             string dw_shaft = llList2String(doorways, dw_shaft_idx);
                    
-            // Continue with the next iteration if the shaft doesn't match    
-            if (dw_shaft != shaft)
+            // Only instruct doorways that match the current shaft    
+            if (dw_shaft == shaft)
             {
-                jump request_doorway_setup_continue;
+                // Current floor unknown, will be filled in by function
+                list params = [floor_info, NOT_FOUND, rc_floor_num, pos, rot];
+                request_doorway_setup(d, params);
+                ++num_components_messaged;
             }
-            
-            // Get the doorways' UUID and floor name
-            integer dw_uuid_idx  = d * DOORWAYS_STRIDE + DOORWAYS_IDX_UUID;
-            integer dw_floor_idx = d * DOORWAYS_STRIDE + DOORWAYS_IDX_FLOOR;
-            key    dw_uuid  = llList2Key(doorways, dw_uuid_idx);
-            string dw_floor = llList2String(doorways, dw_floor_idx);
-            
-            // Find the list indices for the recall floor, as well as 
-            // this doorway's floor; for this we use the floor names:
-            // [float zpos, string name, ...]
-            integer floor_idx = llListFindList(floors, [dw_floor]) - 1;
-            integer floor_num = floor_idx / FLOORS_STRIDE; 
-         
-            // Lastly, we gather and pack all the relevant parameters
-            //
-            //             .- pos of reference doorway
-            //             |    .- rot of reference doorway
-            //             |    |    .- list of all floors
-            //             |    |    |           .- recall floor index
-            //             |    |    |           |             .- floor index
-            //             |    |    |           |             |
-            list params = [pos, rot, floor_info, rc_floor_num, floor_num];
-            
-            // Finally, we can send the setup message to the doorway
-            send_message(dw_uuid, CMD_CONFIG, params);
-            ++num_doorways_messaged;
-            
-            // Label for skipping an interation of this loop
-            @request_doorway_setup_continue;
         }
-    }
-    return num_doorways_messaged;
-}
 
-integer request_cab_setup()
-{
-    // TODO
-    integer num_cabs = get_strided_length(cabs, CABS_STRIDE);
-    integer c;
+        // Iterate cabs, message those with a matching shaft name
+        for (c = 0; c < num_cabs; ++c)
+        {
+            integer cab_shaft_idx = c * CABS_STRIDE + CABS_IDX_SHAFT;
+            string cab_shaft = llList2String(cabs, cab_shaft_idx);
+            
+            // Only instruct cabs that match the current shaft    
+            if (cab_shaft == shaft)
+            {
+                // Current floor is same as recall floor
+                list params = [floor_info, rc_floor_num, rc_floor_num];
+                request_cab_setup(c, params);
+                ++num_components_messaged;
+            }
+        }        
+    }
     
-    for (c = 0; c < num_cabs; ++c)
+    integer num_buttons = get_strided_length(buttons, BUTTONS_STRIDE);
+    integer b;
+    
+    // Iterate and message all buttons, recycle most recent floor_info
+    for (b = 0; b < num_buttons; ++b)
     {
-        key uuid = llList2Key(cabs, c * CABS_STRIDE + CABS_IDX_UUID);
-        // TODO params are missing from the message!
-        send_message(uuid, CMD_CONFIG, []);
+        list params = [floor_info, NOT_FOUND, NOT_FOUND];
+        request_button_setup(b, params);
+        ++num_components_messaged;   
     }
-    
-    return FALSE;
+        
+    return num_components_messaged;
 }
 
-integer all_components_setup()
+integer request_doorway_setup(integer d, list params)
+{
+    // Get the doorways' UUID and floor name
+    integer dw_uuid_idx  = d * DOORWAYS_STRIDE + DOORWAYS_IDX_UUID;
+    integer dw_floor_idx = d * DOORWAYS_STRIDE + DOORWAYS_IDX_FLOOR;
+    key    dw_uuid  = llList2Key(doorways, dw_uuid_idx);
+    string dw_floor = llList2String(doorways, dw_floor_idx);
+    
+    // Find the list indices for the recall floor, as well as 
+    // this doorway's floor; for this we use the floor names:
+    // [float zpos, string name, ...]
+    integer floor_idx = llListFindList(floors, [dw_floor]) - 1;
+    integer floor_num = floor_idx / FLOORS_STRIDE; 
+    
+    // [floor_info, floor_num, rc_floor_num, pos, rot];
+    params = llListReplaceList(params, [floor_num], CFG_IDX_CURR_FLOOR, 
+                                                    CFG_IDX_CURR_FLOOR);
+    
+    // Finally, we can send the setup message to the doorway
+    send_message(dw_uuid, CMD_CONFIG, params);
+    return TRUE;
+}
+
+integer request_cab_setup(integer c, list params)
+{
+    // Get the cab's UUID
+    integer cab_uuid_idx  = c * CABS_STRIDE + CABS_IDX_UUID;
+    key     cab_uuid  = llList2Key(cabs, cab_uuid_idx);
+
+    // [floor_num, rc_floor_num, floor_info];
+    send_message(cab_uuid, CMD_CONFIG, params);
+    return TRUE;
+}
+
+integer request_button_setup(integer b, list params)
+{
+    integer button_uuid_idx = b * BUTTONS_STRIDE + BUTTONS_IDX_UUID;
+    key     button_uuid = llList2Key(buttons, button_uuid_idx);
+    
+    send_message(button_uuid, CMD_CONFIG, params);
+    return TRUE;
+}
+
+integer all_components_ready()
 {
     integer num_cabs = get_strided_length(cabs, CABS_STRIDE);
     integer c;
@@ -743,10 +787,10 @@ state config
         
         listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
         
-        // TODO send 'setup' message to all components
-        request_doorway_setup();
-        request_cab_setup();
+        // Send 'config' message to all components
+        request_component_setup();
         
+        // Give components some time to perform configuration
         llSetTimerEvent(CONFIG_TIME);
     }
     
@@ -756,9 +800,10 @@ state config
     }
     
     timer()
-    {        
+    {
+        // Time is up, let's see if all components are running
         llSetTimerEvent(0.0);
-        if (all_components_setup())
+        if (all_components_ready())
         {
             llOwnerSay("Config done. All systems ready.");
             state running; 

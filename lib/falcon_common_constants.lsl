@@ -20,6 +20,10 @@
 #define IDENT_IDX_SHAFT 1
 #define IDENT_IDX_FLOOR 2
 
+#define CFG_IDX_FLOOR_INFO 0
+#define CFG_IDX_CURR_FLOOR 1
+#define CFG_IDX_BASE_FLOOR 2
+
 #define STATE_INITIAL "default"
 #define STATE_PAIRING "pairing"
 #define STATE_CONFIG  "config"
@@ -34,5 +38,6 @@
 #define CMD_CHANNEL "channel"
 #define CMD_EVENT   "event"
 #define CMD_RESET   "reset"
+#define CMD_SUB     "subscribe"
 
 
