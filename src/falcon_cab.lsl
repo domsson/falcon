@@ -89,7 +89,6 @@ integer process_message(integer chan, string name, key id, string msg)
     }
     if (cmd == CMD_CONFIG)
     {
-        debug("lol0");
         return handle_cmd_config(id, sig, ident, params);
     }
     
