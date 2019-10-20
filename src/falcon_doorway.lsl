@@ -18,6 +18,7 @@ key controller = NULL_KEY;
 integer listen_handle;
 string  current_state;
 string  next_state;
+list    configuration;
 
 ////////////////////////////////////////////////////////////////////////////////
 ////  UTILITY FUNCTIONS                                                     ////
@@ -48,7 +49,6 @@ integer ident_matches(string ident, integer idx)
  */
 integer process_message(integer chan, string name, key id, string msg)
 {
-
     /*
     // Get the sender's owner and abort if they don't match with ours
     list details = llGetObjectDetails(id, [OBJECT_OWNER]);
@@ -77,32 +77,32 @@ integer process_message(integer chan, string name, key id, string msg)
     // Hand over to the appropriate command handler
     if (cmd == CMD_PING)
     {
-        return handle_cmd_ping(id, sig, ident);
+        return handle_cmd_ping(id, sig, ident, params);
     }
     if (cmd == CMD_STATUS)
     {
-        return handle_cmd_status(id, sig, ident);
+        return handle_cmd_status(id, sig, ident, params);
     }
     if (cmd == CMD_PAIR)
     {
-        return handle_cmd_pair(id, sig, ident);
+        return handle_cmd_pair(id, sig, ident, params);
     }
     if (cmd == CMD_CONFIG)
     {
-        return handle_cmd_setup(id, sig, ident);
+        return handle_cmd_config(id, sig, ident, params);
     }
     
     // Message has not been handled
     return NOT_HANDLED;
 }
 
-integer handle_cmd_ping(key id, string sig, string ident)
+integer handle_cmd_ping(key id, string sig, string ident, list params)
 {
     send_message(id, CMD_PONG, []);
     return TRUE;
 }
 
-integer handle_cmd_status(key id, string sig, string ident)
+integer handle_cmd_status(key id, string sig, string ident, list params)
 {
     // Abort if `bank` doesn't match
     if (!ident_matches(ident, IDENT_IDX_BANK))
@@ -115,7 +115,7 @@ integer handle_cmd_status(key id, string sig, string ident)
     return TRUE;
 }
 
-integer handle_cmd_pair(key id, string sig, string ident)
+integer handle_cmd_pair(key id, string sig, string ident, list params)
 {
     // Abort if `bank` doesn't match
     if (!ident_matches(ident, IDENT_IDX_BANK))
@@ -123,13 +123,20 @@ integer handle_cmd_pair(key id, string sig, string ident)
         return NOT_HANDLED;
     }
 
-    // Set/update the controller and send back a status message
+    // If we were paired before, but now switch to a new controller...
+    if (controller != NULL_KEY && controller != id)
+    {
+        // ...let's first inform the old controller about it
+        send_message(controller, CMD_STATUS, [current_state, id]);
+    }
+    
+    // Set/update the controller and inform the new controller
     controller = id;
     send_message(id, CMD_STATUS, [current_state, controller]);
     return TRUE;
 }
 
-integer handle_cmd_setup(key id, string sig, string ident)
+integer handle_cmd_config(key id, string sig, string ident, list params)
 {
     // Abort if `bank` doesn't match
     if (!ident_matches(ident, IDENT_IDX_BANK))
@@ -142,6 +149,8 @@ integer handle_cmd_setup(key id, string sig, string ident)
     {
         return NOT_HANDLED;
     }
+    
+    list configuration = params;
     
     // Request change to config state
     next_state = STATE_CONFIG;
