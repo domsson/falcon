@@ -7,9 +7,6 @@
 
 string SIGNATURE = SIG_CONTROLLER;
 
-float PAIRING_TIME = 3.0;
-float CONFIG_TIME  = 6.0;
-
 ////////////////////////////////////////////////////////////////////////////////
 ////  OTHER SCRIPT STATE GLOBALS                                            ////
 ////////////////////////////////////////////////////////////////////////////////
@@ -101,6 +98,10 @@ integer process_message(integer chan, string name, key id, string msg)
     {
         return handle_cmd_status(id, sig, ident, params);
     }
+    if (cmd == CMD_EVENT)
+    {
+        return handle_cmd_event(id, sig, ident, params);
+    }
     
     // Message has not been handled
     return NOT_HANDLED;
@@ -109,6 +110,29 @@ integer process_message(integer chan, string name, key id, string msg)
 integer handle_cmd_pong(key id, string sig, string ident, list params)
 {
     // Currently nothing
+    return NOT_HANDLED;
+}
+
+integer handle_cmd_event(key id, string sig, string ident, list params)
+{
+    // Currently nothing
+    debug("Received event from " + sig);
+    
+    if (EVT_CALL == llList2String(params, 0))
+    {
+        list ident_tokens = parse_ident(ident, ":");
+        string shaft = llList2String(ident_tokens, IDENT_IDX_SHAFT);
+        string floor = llList2String(ident_tokens, IDENT_IDX_FLOOR);
+        debug("Request from floor " + floor);
+        // Find the z-pos for that floor
+        integer floor_idx = llListFindList(floors, [floor]);
+        float z_pos = llList2Float(floors, floor_idx - 1);
+        float speed = 3.0;
+        // Find the cab that serves this shaft
+        integer cab_idx = llListFindList(cabs, [shaft]);
+        key cab_uuid = llList2String(cabs, cab_idx + CABS_IDX_UUID);
+        send_message(cab_uuid, "action", ["move", z_pos, speed]);
+    }
     return NOT_HANDLED;
 }
 
@@ -739,7 +763,7 @@ state pairing
         listen_handle = llListen(CHANNEL, "", NULL_KEY, "");
 
         send_broadcast(CMD_PAIR, []);
-        llSetTimerEvent(PAIRING_TIME);
+        llSetTimerEvent(TIME_PAIRING);
     }
     
     listen(integer channel, string name, key id, string message)
@@ -779,7 +803,7 @@ state config
         request_component_setup();
         
         // Give components some time to perform configuration
-        llSetTimerEvent(CONFIG_TIME);
+        llSetTimerEvent(TIME_CONFIG);
     }
     
     listen(integer channel, string name, key id, string message)
@@ -822,6 +846,11 @@ state running
     listen(integer channel, string name, key id, string message)
     {
         process_message(channel, name, id, message);
+    }
+    
+    touch_end(integer total_number)
+    {
+        llResetScript();
     }
     
     state_exit()

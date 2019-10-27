@@ -212,9 +212,8 @@ state config
         // We inform the controller of our status change
         send_message(controller, CMD_STATUS, [current_state, controller]);
         
-        // TODO: initiate setup of subcomponents!
-        //       then switch to ready state once done,
-        //       or error state in case shit went south.
+        // TODO: initiate setup of subcomponents!        
+        llSetTimerEvent(TIME_CONFIG - 1);
     }
 
     listen(integer channel, string name, key id, string message)
@@ -233,6 +232,15 @@ state config
         {
             state error;
         }
+    }
+    
+    timer()
+    {
+        llSetTimerEvent(0.0);
+        
+        // TODO: check if all subcomponents were configured successfully,
+        //       then enter running state if so. For now, we just pretend.
+        state running;
     }
 
     state_exit()
@@ -275,6 +283,11 @@ state running
         {
             state error;
         }
+    }
+    
+    touch_end(integer num_detected)
+    {
+        send_message(controller, "event", ["call"]);
     }
      
     state_exit()

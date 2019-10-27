@@ -344,11 +344,24 @@ be set up accordingly.
 
 #### `event`
 
-	< event event-name [event-details...]
+	< event event-name event-type [event-details...]
 	
 Informs the controller about an event. An event could be when an avatar has 
 clicked on one of the floor buttons, when an elevator cab has arrived at its 
 destination, when a doorway's doors have finished opening/ closing, etc.
+
+The `event-type` informs about whether the event has just started, ended or is 
+an event without duration (in which case `event-type` would be `none`).
+
+*(SUBJECT TO CHANGE)* Possible events might include:
+
+- `call [type] floor [dir]`: A call button has been pressed for the given floor
+- `move [type] from to`: Cab has startet/finished moving from `from` to `to`
+- `open [type]`: Cab/doorway has started/finished opening its doors
+- `close [type]`: Cab/doorway has started/finished closing its doors
+- `???`: User clicked the 'open doors' button
+- `???`: User clicked the 'clsoe doors' button
+- `???`: User clicked some other special button
 
 #### `action`
 
@@ -356,11 +369,11 @@ destination, when a doorway's doors have finished opening/ closing, etc.
 	
 *(SUBJECT TO CHANGE)* Instructs a component to perform a certain `action-type`:
 
-- `goto [floor]`: Request a cab to travel to the given floor/ landing
-- `mode [mode]`: Request a component to switch to a specific mode of operation
-- `halt`: Request a cab to halt entirely
+- `move z-pos [speed]`: Request a cab to travel to the given z-position
+- `halt`: Request a cab to halt entirely (simulating power outage, for example)
 - `open`: Request a cab/ doorway to open its doors (or equivalent)
 - `close`: Request a cab/ doorway to close its doors (or equivalent)
+- `mode [mode]`: Request a component to switch to a specific mode of operation
 
 
 ## Outstanding design decisions
@@ -394,7 +407,7 @@ controller will be needed, which could introduce lag.
 The decision is important for the design of the `event` and `action` commands.
 
 For now, I think I'd like to try and implement the _dumb_ approach, as it keeps 
-the state and responsibility or the system entirely within the controller. 
+the state and responsibility for the system entirely within the controller. 
 Should the complexity of this approach become overwhelming, I can scrap all 
 progress on it, cry a little, then start working on the _smart_ approach.
 

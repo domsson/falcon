@@ -37,7 +37,24 @@
 #define CMD_CONFIG  "config"
 #define CMD_CHANNEL "channel"
 #define CMD_EVENT   "event"
+#define CMD_ACTION  "action"
 #define CMD_RESET   "reset"
 #define CMD_SUB     "subscribe"
+
+#define ACT_MOVE    "move"
+#define ACT_HALT    "halt"
+
+#define EVT_CALL	"call"
+#define EVT_MOVE	"move"
+#define EVT_HALT	"halt"
+#define EVT_OPEN	"open"
+#define EVT_CLOSE	"close"
+
+#define EVT_TYPE_NONE	"none"
+#define EVT_TYPE_START	"start"
+#define EVT_TYPE_STOP	"stop"
+
+#define TIME_PAIRING 3.0
+#define TIME_CONFIG  6.0
 
 

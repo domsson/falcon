@@ -37,6 +37,20 @@ integer ident_matches(string ident, integer idx)
     return llList2String(other_tokens, idx) == llList2String(our_tokens, idx);
 }
 
+move_to(float z_new, float speed)
+{
+        vector current_pos = llGetPos();
+        float delta_z = z_new - current_pos.z;
+        float move_time = llFabs(delta_z / speed);
+        vector new_pos = <0.0, 0.0, delta_z>;
+
+        debug("Moving from " + (string) current_pos.z + " to " + 
+                    (string) z_new + " (" + (string) delta_z + " m) in " + 
+                    (string) move_time + " s");
+
+        llSetKeyframedMotion([new_pos, move_time], [KFM_DATA, KFM_TRANSLATION]);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 ////  MESSAGE HANDLING FUNCTIONS                                            ////
 ////////////////////////////////////////////////////////////////////////////////
@@ -90,6 +104,10 @@ integer process_message(integer chan, string name, key id, string msg)
     if (cmd == CMD_CONFIG)
     {
         return handle_cmd_config(id, sig, ident, params);
+    }
+    if (cmd == CMD_ACTION)
+    {
+        return handle_cmd_action(id, sig, ident, params);
     }
     
     // Message has not been handled
@@ -157,6 +175,19 @@ integer handle_cmd_config(key id, string sig, string ident, list params)
     return TRUE;
 }
 
+integer handle_cmd_action(key id, string sig, string ident, list params)
+{
+    // TODO
+    if (ACT_MOVE == llList2String(params, 0))
+    {
+        //debug("Moving to " + llList2String(params, 1));
+        float z_new = llList2Float(params, 1);
+        float speed = llList2Float(params, 2);
+        move_to(z_new, speed);
+    }
+    return NOT_HANDLED;
+}
+
 integer init()
 {
     uuid = llGetKey();
@@ -173,6 +204,7 @@ default
     state_entry()
     {
         current_state = STATE_INITIAL;
+        next_state = "";
         print_state_info();
         
         // Perform basic initialization first
@@ -207,6 +239,7 @@ state config
     state_entry()
     {
         current_state = STATE_CONFIG;
+        next_state = "";
         print_state_info();
         
         // Listen to messages
@@ -215,9 +248,8 @@ state config
         // We inform the controller of our status change
         send_message(controller, CMD_STATUS, [current_state, controller]);
         
-        // TODO: initiate setup of subcomponents!
-        //       then switch to ready state once done,
-        //       or error state in case shit went south.
+        // TODO: initiate setup of subcomponents!        
+        llSetTimerEvent(TIME_CONFIG - 1);
     }
 
     listen(integer channel, string name, key id, string message)
@@ -237,6 +269,15 @@ state config
             state error;
         }
     }
+    
+    timer()
+    {
+        llSetTimerEvent(0.0);
+        
+        // TODO: check if all subcomponents were configured successfully,
+        //       then enter running state if so. For now, we just pretend.
+        state running;
+    }
 
     state_exit()
     {
@@ -253,6 +294,7 @@ state running
     state_entry()
     {
         current_state = STATE_RUNNING;
+        next_state = "";
         print_state_info();
         
         // Listen to messages
@@ -296,6 +338,7 @@ state error
     state_entry()
     {
         current_state = STATE_ERROR;
+        next_state = "";
         print_state_info();
         
         // Listen to messages
@@ -328,3 +371,54 @@ state error
         // Nothing yet
     }
 }
+
+/*
+// Currently moving to another landing
+// In this state, we need to consider mode changes, power outages, ...
+state moving
+{
+    state_entry()
+    {
+        vector current_pos = llGetPos();
+        float delta_z = move_to - current_pos.z;
+        float move_time = llFabs(delta_z / speed);
+        vector new_pos = <0.0, 0.0, delta_z>;
+
+        llOwnerSay("Moving from " + (string) current_pos.z + " to " + 
+                    (string) move_to + " (" + (string) delta_z + " m) in " + 
+                    (string) move_time + " s");
+
+        llSetKeyframedMotion([new_pos, move_time], [KFM_DATA, KFM_TRANSLATION]);
+    }
+    
+    moving_end()
+    {
+        // Confirm the target position
+        vector current_pos = llGetPos();
+        vector target_pos = <current_pos.x, current_pos.y, move_to>;
+        llSetLinkPrimitiveParamsFast(LINK_ROOT, [PRIM_POSITION, target_pos]);
+        move_to = 0.0;
+        speed   = 0.0;
+        state arriving;
+    }
+    
+    state_exit()
+    {
+    }
+}
+
+// Stopped, possibly between landings
+// Useful for emergency power mode, power outages or manual system halt
+state halted
+{
+    state_entry()
+    {
+        llSetKeyframedMotion([], [KFM_COMMAND, KFM_CMD_PAUSE]);
+    }
+    
+    state_exit()
+    {
+        llSetKeyframedMotion([], [KFM_COMMAND, KFM_CMD_PLAY]);
+    }
+}
+*/
