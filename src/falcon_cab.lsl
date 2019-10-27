@@ -37,20 +37,6 @@ integer ident_matches(string ident, integer idx)
     return llList2String(other_tokens, idx) == llList2String(our_tokens, idx);
 }
 
-move_to(float z_new, float speed)
-{
-        vector current_pos = llGetPos();
-        float delta_z = z_new - current_pos.z;
-        float move_time = llFabs(delta_z / speed);
-        vector new_pos = <0.0, 0.0, delta_z>;
-
-        debug("Moving from " + (string) current_pos.z + " to " + 
-                    (string) z_new + " (" + (string) delta_z + " m) in " + 
-                    (string) move_time + " s");
-
-        llSetKeyframedMotion([new_pos, move_time], [KFM_DATA, KFM_TRANSLATION]);
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 ////  MESSAGE HANDLING FUNCTIONS                                            ////
 ////////////////////////////////////////////////////////////////////////////////
@@ -186,6 +172,24 @@ integer handle_cmd_action(key id, string sig, string ident, list params)
         move_to(z_new, speed);
     }
     return NOT_HANDLED;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////  COMPONENT SPECIFIC FUNCTIONS                                          ////
+////////////////////////////////////////////////////////////////////////////////
+
+move_to(float z_new, float speed)
+{
+        vector current_pos = llGetPos();
+        float delta_z = z_new - current_pos.z;
+        float move_time = llFabs(delta_z / speed);
+        vector new_pos = <0.0, 0.0, delta_z>;
+
+        debug("Moving from " + (string) current_pos.z + " to " + 
+                    (string) z_new + " (" + (string) delta_z + " m) in " + 
+                    (string) move_time + " s");
+
+        llSetKeyframedMotion([new_pos, move_time], [KFM_DATA, KFM_TRANSLATION]);
 }
 
 integer init()
