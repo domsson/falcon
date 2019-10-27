@@ -350,6 +350,49 @@ Informs the controller about an event. An event could be when an avatar has
 clicked on one of the floor buttons, when an elevator cab has arrived at its 
 destination, when a doorway's doors have finished opening/ closing, etc.
 
+#### `action`
+
+	> action [action-type] [action-parameters]
+	
+*(SUBJECT TO CHANGE)* Instructs a component to perform a certain `action-type`:
+
+- `goto [floor]`: Request a cab to travel to the given floor/ landing
+- `mode [mode]`: Request a component to switch to a specific mode of operation
+- `halt`: Request a cab to halt entirely
+- `open`: Request a cab/ doorway to open its doors (or equivalent)
+- `close`: Request a cab/ doorway to close its doors (or equivalent)
+
+
+## Outstanding design decisions
+
+Most importantly, I'm undecided if we should have 'smart' or 'dumb' components:
+
+In the first case (_smart_ components), the controller would simply forward most 
+events that it learns about to the other components. Those could then decide 
+upon whether and how to react to such an event. Example: a `cab` arriving on 
+a floor sends an `event` to the controller, the controller forwards it to all 
+other components. A `call_button` on that floor could then decide to stop 
+indicating. Another example would be a cab opening its doors automatically on 
+arrival on a floor, instead of waiting for a seperate instruction to do so. 
+This could lead to "badly behaving" components if components don't react to 
+certain events correctly - for example, if the system is emergency mode because 
+of a fire, maybe cabs should keep their doors closed on affected floors. 
+Essentially, this means that components need to have more knowledge of the state 
+of the system; this "shared" state would need to be kept consistent across the 
+controller and all components.
+
+In the second case (_dumb_ components), components will not do anything unless 
+specifically instructed to do so by the controller. This means a lot more work, 
+but also more fine-grained control for the controller. It also means a very 
+clear separation of concerns and that the system's state would be held only in 
+the controller. Components would not make any assumptions at all and only do 
+precisely what they are asked to do. Performance-wise, it would keep the 
+multiple comoponent scripts smaller, while the single controller script would 
+be bigger. On the other hand, much more communication between components and 
+controller will be needed, which could introduce lag.
+
+The decision is important for the design of the `event` and `action` commands.
+
 
 ## Things to look out for
 
