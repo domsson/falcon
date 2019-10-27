@@ -393,6 +393,11 @@ controller will be needed, which could introduce lag.
 
 The decision is important for the design of the `event` and `action` commands.
 
+For now, I think I'd like to try and implement the _dumb_ approach, as it keeps 
+the state and responsibility or the system entirely within the controller. 
+Should the complexity of this approach become overwhelming, I can scrap all 
+progress on it, cry a little, then start working on the _smart_ approach.
+
 
 ## Things to look out for
 
