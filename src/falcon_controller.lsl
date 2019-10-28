@@ -128,10 +128,16 @@ integer handle_cmd_event(key id, string sig, string ident, list params)
         integer floor_idx = llListFindList(floors, [floor]);
         float z_pos = llList2Float(floors, floor_idx - 1);
         float speed = 3.0;
+        // Find the doorway-cab-offset for this shaft
+        // [string name, float doorway_offset, string recall_floor...]
+        integer shaft_idx = llListFindList(shafts, [shaft]);
+        integer shaft_offset_idx = shaft_idx + 1;
+        float offset = llList2Float(shafts, shaft_offset_idx);
+        debug("Doorway offset: " + (string) offset);
         // Find the cab that serves this shaft
         integer cab_idx = llListFindList(cabs, [shaft]);
         key cab_uuid = llList2String(cabs, cab_idx + CABS_IDX_UUID);
-        send_message(cab_uuid, "action", ["move", z_pos, speed]);
+        send_message(cab_uuid, "action", ["move", z_pos - offset, speed]);
     }
     return NOT_HANDLED;
 }
@@ -401,10 +407,10 @@ list get_closest_doorway(string shaft, float zpos)
             float doorway_zpos = get_doorway_zpos(doorway_floor);
             
             // Calculate the distance of the doorway to the given zpos
-            float distance = llFabs(doorway_zpos - zpos);
+            float distance = doorway_zpos - zpos;
         
             // Check if this doorway is closer than any previous one
-            if (distance < closest_distance)
+            if (llFabs(distance) < llFabs(closest_distance))
             {
                 closest_doorway  = i;
                 closest_distance = distance;
