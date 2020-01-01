@@ -20,6 +20,9 @@ string  current_state;
 string  next_state;
 list    configuration;
 
+float current_target;
+float current_speed;
+
 ////////////////////////////////////////////////////////////////////////////////
 ////  UTILITY FUNCTIONS                                                     ////
 ////////////////////////////////////////////////////////////////////////////////
@@ -180,16 +183,28 @@ integer handle_cmd_action(key id, string sig, string ident, list params)
 
 move_to(float z_new, float speed)
 {
-        vector current_pos = llGetPos();
-        float delta_z = z_new - current_pos.z;
-        float move_time = llFabs(delta_z / speed);
-        vector new_pos = <0.0, 0.0, delta_z>;
+    vector current_pos = llGetPos();
+    float delta_z = z_new - current_pos.z;
+    float move_time = llFabs(delta_z / speed);
+    vector new_pos = <0.0, 0.0, delta_z>;
 
-        debug("Moving from " + (string) current_pos.z + " to " + 
-                    (string) z_new + " (" + (string) delta_z + " m) in " + 
-                    (string) move_time + " s");
+    debug("Moving from " + (string) current_pos.z + " to " + 
+                (string) z_new + " (" + (string) delta_z + " m) in " + 
+                (string) move_time + " s");
 
-        llSetKeyframedMotion([new_pos, move_time], [KFM_DATA, KFM_TRANSLATION]);
+    current_target = z_new;
+    current_speed  = speed;
+    
+    llSetKeyframedMotion([new_pos, move_time], [KFM_DATA, KFM_TRANSLATION]);
+}
+
+move_end()
+{
+    vector current_pos = llGetPos();
+    vector target_pos = <current_pos.x, current_pos.y, current_target>;
+    llSetLinkPrimitiveParamsFast(LINK_ROOT, [PRIM_POSITION, target_pos]);
+    current_target = 0.0;
+    current_speed  = 0.0;
 }
 
 integer init()
@@ -330,6 +345,11 @@ state running
     {
         // Nothing yet
     }
+    
+    moving_end()
+    {
+        move_end();
+    }
 }
 
 /*
@@ -377,40 +397,6 @@ state error
 }
 
 /*
-// Currently moving to another landing
-// In this state, we need to consider mode changes, power outages, ...
-state moving
-{
-    state_entry()
-    {
-        vector current_pos = llGetPos();
-        float delta_z = move_to - current_pos.z;
-        float move_time = llFabs(delta_z / speed);
-        vector new_pos = <0.0, 0.0, delta_z>;
-
-        llOwnerSay("Moving from " + (string) current_pos.z + " to " + 
-                    (string) move_to + " (" + (string) delta_z + " m) in " + 
-                    (string) move_time + " s");
-
-        llSetKeyframedMotion([new_pos, move_time], [KFM_DATA, KFM_TRANSLATION]);
-    }
-    
-    moving_end()
-    {
-        // Confirm the target position
-        vector current_pos = llGetPos();
-        vector target_pos = <current_pos.x, current_pos.y, move_to>;
-        llSetLinkPrimitiveParamsFast(LINK_ROOT, [PRIM_POSITION, target_pos]);
-        move_to = 0.0;
-        speed   = 0.0;
-        state arriving;
-    }
-    
-    state_exit()
-    {
-    }
-}
-
 // Stopped, possibly between landings
 // Useful for emergency power mode, power outages or manual system halt
 state halted
